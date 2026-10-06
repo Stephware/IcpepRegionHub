@@ -7,4 +7,223 @@ datasource db {
   provider = "postgresql"
 }
 
-// ICpEP Region 3 Hub domain models will be added in future migrations.
+model Chapter {
+  chapterId      BigInt           @id @default(autoincrement()) @map("chapter_id")
+  schoolName     String           @map("school_name") @db.VarChar(200)
+  chapterName    String           @map("chapter_name") @db.VarChar(200)
+  acronym        String?          @db.VarChar(50)
+  officialEmail  String?          @map("official_email") @db.VarChar(256)
+  contactNumber  String?          @map("contact_number") @db.VarChar(30)
+  address        String?          @db.VarChar(300)
+  logoUrl        String?          @map("logo_url") @db.VarChar(500)
+  facebookUrl    String?          @map("facebook_url") @db.VarChar(500)
+  status         String           @default("Active") @db.VarChar(20)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime?        @map("updated_at") @db.Timestamptz(6)
+
+  users                  User[]
+  officers               ChapterOfficer[]
+  organizedEvents        Event[]
+  assistanceRequests     AssistanceRequest[]
+  collaborationPosts     CollaborationPost[]
+  collaborationResponses CollaborationResponse[]
+
+  @@map("chapters")
+}
+
+model User {
+  userId       BigInt    @id @default(autoincrement()) @map("user_id")
+  chapterId    BigInt?   @map("chapter_id")
+  firstName    String    @map("first_name") @db.VarChar(100)
+  lastName     String    @map("last_name") @db.VarChar(100)
+  email        String    @db.VarChar(256)
+  passwordHash String    @map("password_hash") @db.Text
+  role         String    @db.VarChar(30)
+  isApproved   Boolean   @default(false) @map("is_approved")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  chapter                Chapter?                  @relation(fields: [chapterId], references: [chapterId], onDelete: SetNull)
+  officerRecords         ChapterOfficer[]
+  announcementsCreated   Announcement[]            @relation("AnnouncementCreator")
+  eventsCreated          Event[]                   @relation("EventCreator")
+  assistanceSubmitted    AssistanceRequest[]       @relation("AssistanceSubmitter")
+  assistanceAssigned     AssistanceRequest[]       @relation("AssistanceAssignee")
+  assistanceUpdates      AssistanceRequestUpdate[]
+  collaborationPosts     CollaborationPost[]       @relation("CollaborationPostCreator")
+  collaborationResponses CollaborationResponse[]
+
+  @@index([chapterId], map: "ix_users_chapter")
+  @@index([role], map: "ix_users_role")
+  @@map("users")
+}
+
+model ChapterOfficer {
+  chapterOfficerId BigInt    @id @default(autoincrement()) @map("chapter_officer_id")
+  chapterId        BigInt    @map("chapter_id")
+  userId           BigInt?   @map("user_id")
+  fullName         String    @map("full_name") @db.VarChar(150)
+  position         String    @db.VarChar(100)
+  email            String?   @db.VarChar(256)
+  contactNumber    String?   @map("contact_number") @db.VarChar(30)
+  academicYear     String    @map("academic_year") @db.VarChar(20)
+  isCurrent        Boolean   @default(true) @map("is_current")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  chapter Chapter @relation(fields: [chapterId], references: [chapterId], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [userId], onDelete: SetNull)
+
+  @@index([chapterId], map: "ix_chapter_officers_chapter")
+  @@index([isCurrent], map: "ix_chapter_officers_current")
+  @@map("chapter_officers")
+}
+
+model Announcement {
+  announcementId  BigInt    @id @default(autoincrement()) @map("announcement_id")
+  title           String    @db.VarChar(250)
+  content         String    @db.Text
+  category        String    @db.VarChar(100)
+  visibility      String    @default("Public") @db.VarChar(20)
+  coverImageUrl   String?   @map("cover_image_url") @db.VarChar(500)
+  externalLink    String?   @map("external_link") @db.VarChar(500)
+  isPinned        Boolean   @default(false) @map("is_pinned")
+  isPublished     Boolean   @default(false) @map("is_published")
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
+  expiresAt       DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdByUserId BigInt    @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  createdBy User @relation("AnnouncementCreator", fields: [createdByUserId], references: [userId])
+
+  @@index([publishedAt], map: "ix_announcements_published_at")
+  @@index([category], map: "ix_announcements_category")
+  @@index([isPublished], map: "ix_announcements_is_published")
+  @@index([isPinned], map: "ix_announcements_is_pinned")
+  @@map("announcements")
+}
+
+model Event {
+  eventId              BigInt    @id @default(autoincrement()) @map("event_id")
+  title                String    @db.VarChar(250)
+  description          String?   @db.Text
+  eventType            String    @map("event_type") @db.VarChar(100)
+  organizerChapterId   BigInt?   @map("organizer_chapter_id")
+  venue                String?   @db.VarChar(300)
+  startDateTime        DateTime  @map("start_date_time") @db.Timestamptz(6)
+  endDateTime          DateTime? @map("end_date_time") @db.Timestamptz(6)
+  registrationDeadline DateTime? @map("registration_deadline") @db.Timestamptz(6)
+  registrationLink     String?   @map("registration_link") @db.VarChar(500)
+  coverImageUrl        String?   @map("cover_image_url") @db.VarChar(500)
+  status               String    @default("Upcoming") @db.VarChar(20)
+  isPublished          Boolean   @default(false) @map("is_published")
+  createdByUserId      BigInt    @map("created_by_user_id")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  organizer Chapter? @relation(fields: [organizerChapterId], references: [chapterId], onDelete: SetNull)
+  createdBy User     @relation("EventCreator", fields: [createdByUserId], references: [userId])
+
+  @@index([startDateTime], map: "ix_events_start_date_time")
+  @@index([status], map: "ix_events_status")
+  @@index([organizerChapterId], map: "ix_events_organizer_chapter")
+  @@index([isPublished], map: "ix_events_is_published")
+  @@map("events")
+}
+
+model AssistanceRequest {
+  assistanceRequestId BigInt    @id @default(autoincrement()) @map("assistance_request_id")
+  ticketCode          String    @unique(map: "uq_assistance_requests_ticket_code") @map("ticket_code") @db.VarChar(30)
+  chapterId           BigInt    @map("chapter_id")
+  submittedByUserId   BigInt    @map("submitted_by_user_id")
+  category            String    @db.VarChar(100)
+  subject             String    @db.VarChar(250)
+  description         String    @db.Text
+  priority            String    @default("Normal") @db.VarChar(20)
+  status              String    @default("Submitted") @db.VarChar(30)
+  assignedToUserId    BigInt?   @map("assigned_to_user_id")
+  submittedAt         DateTime  @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  resolvedAt          DateTime? @map("resolved_at") @db.Timestamptz(6)
+  updatedAt           DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  chapter     Chapter                   @relation(fields: [chapterId], references: [chapterId])
+  submittedBy User                      @relation("AssistanceSubmitter", fields: [submittedByUserId], references: [userId])
+  assignedTo  User?                     @relation("AssistanceAssignee", fields: [assignedToUserId], references: [userId], onDelete: SetNull)
+  updates     AssistanceRequestUpdate[]
+
+  @@index([chapterId], map: "ix_assistance_requests_chapter")
+  @@index([status], map: "ix_assistance_requests_status")
+  @@index([submittedAt], map: "ix_assistance_requests_submitted_at")
+  @@index([assignedToUserId], map: "ix_assistance_requests_assigned_user")
+  @@map("assistance_requests")
+}
+
+model AssistanceRequestUpdate {
+  updateId            BigInt   @id @default(autoincrement()) @map("update_id")
+  assistanceRequestId BigInt   @map("assistance_request_id")
+  userId              BigInt   @map("user_id")
+  message             String   @db.Text
+  newStatus           String?  @map("new_status") @db.VarChar(30)
+  isInternalNote      Boolean  @default(false) @map("is_internal_note")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  request AssistanceRequest @relation(fields: [assistanceRequestId], references: [assistanceRequestId], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [userId])
+
+  @@index([assistanceRequestId], map: "ix_assistance_request_updates_request")
+  @@index([userId], map: "ix_assistance_request_updates_user")
+  @@index([createdAt], map: "ix_assistance_request_updates_created")
+  @@map("assistance_request_updates")
+}
+
+model CollaborationPost {
+  collaborationPostId BigInt    @id @default(autoincrement()) @map("collaboration_post_id")
+  chapterId           BigInt    @map("chapter_id")
+  createdByUserId     BigInt    @map("created_by_user_id")
+  collaborationType   String    @map("collaboration_type") @db.VarChar(100)
+  title               String    @db.VarChar(250)
+  description         String    @db.Text
+  eventName           String?   @map("event_name") @db.VarChar(250)
+  eventDate           DateTime? @map("event_date") @db.Timestamptz(6)
+  location            String?   @db.VarChar(300)
+  contactName         String?   @map("contact_name") @db.VarChar(150)
+  contactEmail        String?   @map("contact_email") @db.VarChar(256)
+  contactNumber       String?   @map("contact_number") @db.VarChar(30)
+  status              String    @default("Open") @db.VarChar(20)
+  expiresAt           DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  chapter   Chapter                 @relation(fields: [chapterId], references: [chapterId])
+  createdBy User                    @relation("CollaborationPostCreator", fields: [createdByUserId], references: [userId])
+  responses CollaborationResponse[]
+
+  @@index([chapterId], map: "ix_collaboration_posts_chapter")
+  @@index([status], map: "ix_collaboration_posts_status")
+  @@index([createdAt], map: "ix_collaboration_posts_created_at")
+  @@index([collaborationType], map: "ix_collaboration_posts_type")
+  @@map("collaboration_posts")
+}
+
+model CollaborationResponse {
+  collaborationResponseId BigInt    @id @default(autoincrement()) @map("collaboration_response_id")
+  collaborationPostId     BigInt    @map("collaboration_post_id")
+  chapterId               BigInt    @map("chapter_id")
+  userId                  BigInt    @map("user_id")
+  message                 String?   @db.Text
+  status                  String    @default("Pending") @db.VarChar(20)
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime? @map("updated_at") @db.Timestamptz(6)
+
+  post    CollaborationPost @relation(fields: [collaborationPostId], references: [collaborationPostId], onDelete: Cascade)
+  chapter Chapter           @relation(fields: [chapterId], references: [chapterId])
+  user    User              @relation(fields: [userId], references: [userId])
+
+  @@unique([collaborationPostId, chapterId], map: "ux_collaboration_response_post_chapter")
+  @@index([collaborationPostId], map: "ix_collaboration_responses_post")
+  @@index([chapterId], map: "ix_collaboration_responses_chapter")
+  @@index([userId], map: "ix_collaboration_responses_user")
+  @@map("collaboration_responses")
+}
