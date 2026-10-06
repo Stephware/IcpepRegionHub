@@ -1,13 +1,16 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { CreateCollaborationPostDto } from "./dto/create-collaboration-post.dto.js";
+import { CreateCollaborationResponseDto } from "./dto/create-collaboration-response.dto.js";
 import { ListCollaborationsQueryDto } from "./dto/list-collaborations-query.dto.js";
 import { UpdateCollaborationPostDto } from "./dto/update-collaboration-post.dto.js";
+import { UpdateCollaborationResponseStatusDto } from "./dto/update-collaboration-response-status.dto.js";
 
 type CollaborationRecord = {
   collaborationPostId: bigint;
@@ -39,6 +42,29 @@ type CollaborationRecord = {
   };
 };
 
+type CollaborationResponseRecord = {
+  collaborationResponseId: bigint;
+  collaborationPostId: bigint;
+  chapterId: bigint;
+  userId: bigint;
+  message: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date | null;
+  chapter: {
+    chapterId: bigint;
+    schoolName: string;
+    chapterName: string;
+    acronym: string | null;
+  };
+  user: {
+    userId: bigint;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+};
+
 const postInclude = {
   chapter: {
     select: {
@@ -53,6 +79,25 @@ const postInclude = {
       userId: true,
       firstName: true,
       lastName: true,
+    },
+  },
+} as const;
+
+const responseInclude = {
+  chapter: {
+    select: {
+      chapterId: true,
+      schoolName: true,
+      chapterName: true,
+      acronym: true,
+    },
+  },
+  user: {
+    select: {
+      userId: true,
+      firstName: true,
+      lastName: true,
+      email: true,
     },
   },
 } as const;
@@ -296,6 +341,200 @@ export class CollaborationsService {
     };
   }
 
+  async getChapterResponse(
+    collaborationPostId: bigint,
+    chapterId: bigint,
+  ) {
+    const response = await this.prisma.collaborationResponse.findFirst({
+      where: {
+        collaborationPostId,
+        chapterId,
+      },
+      include: responseInclude,
+    });
+
+    return response ? this.toResponse(response) : null;
+  }
+
+  async createResponse(
+    collaborationPostId: bigint,
+    input: CreateCollaborationResponseDto,
+    chapterId: bigint,
+    userId: bigint,
+  ) {
+    await this.ensureActiveChapter(chapterId);
+
+    const post = await this.prisma.collaborationPost.findUnique({
+      where: { collaborationPostId },
+      select: {
+        collaborationPostId: true,
+        chapterId: true,
+        status: true,
+        expiresAt: true,
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException("Collaboration post was not found.");
+    }
+
+    if (
+      post.status !== "Open" ||
+      (post.expiresAt && post.expiresAt.getTime() <= Date.now())
+    ) {
+      throw new BadRequestException(
+        "This collaboration post is no longer accepting responses.",
+      );
+    }
+
+    if (post.chapterId === chapterId) {
+      throw new BadRequestException(
+        "Your chapter cannot respond to its own collaboration post.",
+      );
+    }
+
+    const duplicate = await this.prisma.collaborationResponse.findFirst({
+      where: {
+        collaborationPostId,
+        chapterId,
+      },
+      select: {
+        collaborationResponseId: true,
+      },
+    });
+
+    if (duplicate) {
+      throw new ConflictException(
+        "Your chapter has already responded to this collaboration post.",
+      );
+    }
+
+    const response = await this.prisma.collaborationResponse.create({
+      data: {
+        collaborationPostId,
+        chapterId,
+        userId,
+        message: this.optionalText(input.message),
+        status: "Pending",
+      },
+      include: responseInclude,
+    });
+
+    return {
+      message: "Interest submitted successfully.",
+      response: this.toResponse(response),
+    };
+  }
+
+  async withdrawResponse(
+    collaborationPostId: bigint,
+    chapterId: bigint,
+  ) {
+    const response = await this.prisma.collaborationResponse.findFirst({
+      where: {
+        collaborationPostId,
+        chapterId,
+      },
+      select: {
+        collaborationResponseId: true,
+        status: true,
+      },
+    });
+
+    if (!response) {
+      throw new NotFoundException(
+        "Your chapter has not responded to this collaboration post.",
+      );
+    }
+
+    if (response.status !== "Pending") {
+      throw new BadRequestException(
+        "Only pending collaboration responses can be withdrawn.",
+      );
+    }
+
+    await this.prisma.collaborationResponse.delete({
+      where: {
+        collaborationResponseId: response.collaborationResponseId,
+      },
+    });
+
+    return {
+      message: "Collaboration response withdrawn successfully.",
+    };
+  }
+
+  async listPostResponses(
+    collaborationPostId: bigint,
+    ownerChapterId: bigint,
+    ownerUserId: bigint,
+  ) {
+    await this.findOwnedPost(
+      collaborationPostId,
+      ownerChapterId,
+      ownerUserId,
+    );
+
+    const responses = await this.prisma.collaborationResponse.findMany({
+      where: { collaborationPostId },
+      include: responseInclude,
+      orderBy: [{ createdAt: "desc" }],
+    });
+
+    return responses.map((response) => this.toResponse(response));
+  }
+
+  async updateResponseStatus(
+    collaborationPostId: bigint,
+    collaborationResponseId: bigint,
+    input: UpdateCollaborationResponseStatusDto,
+    ownerChapterId: bigint,
+    ownerUserId: bigint,
+  ) {
+    await this.findOwnedPost(
+      collaborationPostId,
+      ownerChapterId,
+      ownerUserId,
+    );
+
+    const response = await this.prisma.collaborationResponse.findFirst({
+      where: {
+        collaborationResponseId,
+        collaborationPostId,
+      },
+      include: responseInclude,
+    });
+
+    if (!response) {
+      throw new NotFoundException(
+        "Collaboration response was not found.",
+      );
+    }
+
+    if (response.status !== "Pending") {
+      throw new BadRequestException(
+        "Only pending collaboration responses can be accepted or declined.",
+      );
+    }
+
+    const updated = await this.prisma.collaborationResponse.update({
+      where: { collaborationResponseId },
+      data: {
+        status: input.status,
+        updatedAt: new Date(),
+      },
+      include: responseInclude,
+    });
+
+    return {
+      message:
+        input.status === "Accepted"
+          ? "Collaboration response accepted."
+          : "Collaboration response declined.",
+      response: this.toResponse(updated),
+    };
+  }
+
   private async findOwnedPost(
     collaborationPostId: bigint,
     chapterId: bigint,
@@ -342,7 +581,7 @@ export class CollaborationsService {
 
     if (chapter.status !== "Active") {
       throw new BadRequestException(
-        "Only active chapters can create collaboration posts.",
+        "Only active chapters can use the collaboration board.",
       );
     }
   }
@@ -421,6 +660,30 @@ export class CollaborationsService {
         userId: post.createdBy.userId.toString(),
         firstName: post.createdBy.firstName,
         lastName: post.createdBy.lastName,
+      },
+    };
+  }
+
+  private toResponse(response: CollaborationResponseRecord) {
+    return {
+      collaborationResponseId:
+        response.collaborationResponseId.toString(),
+      collaborationPostId: response.collaborationPostId.toString(),
+      message: response.message,
+      status: response.status,
+      createdAt: response.createdAt,
+      updatedAt: response.updatedAt,
+      chapter: {
+        chapterId: response.chapter.chapterId.toString(),
+        schoolName: response.chapter.schoolName,
+        chapterName: response.chapter.chapterName,
+        acronym: response.chapter.acronym,
+      },
+      user: {
+        userId: response.user.userId.toString(),
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        email: response.user.email,
       },
     };
   }

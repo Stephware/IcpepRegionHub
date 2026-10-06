@@ -2,6 +2,8 @@ import { apiFetch } from "@/lib/api/client";
 import type {
   CollaborationPost,
   CollaborationPostInput,
+  CollaborationResponse,
+  CollaborationResponseStatus,
 } from "./types";
 
 export function listOpenCollaborationPosts(type?: string) {
@@ -63,6 +65,59 @@ export function deleteCollaborationPost(postId: string) {
     `/chapter/collaborations/${postId}`,
     {
       method: "DELETE",
+    },
+  );
+}
+
+export function getMyCollaborationResponse(postId: string) {
+  return apiFetch<CollaborationResponse | null>(
+    `/chapter/collaborations/${postId}/my-response`,
+  );
+}
+
+export function createCollaborationResponse(
+  postId: string,
+  message?: string,
+) {
+  return apiFetch<{
+    message: string;
+    response: CollaborationResponse;
+  }>(`/chapter/collaborations/${postId}/responses`, {
+    method: "POST",
+    body: JSON.stringify({
+      message: message?.trim() || undefined,
+    }),
+  });
+}
+
+export function withdrawCollaborationResponse(postId: string) {
+  return apiFetch<{ message: string }>(
+    `/chapter/collaborations/${postId}/responses`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export function listCollaborationResponses(postId: string) {
+  return apiFetch<CollaborationResponse[]>(
+    `/chapter/collaborations/${postId}/responses`,
+  );
+}
+
+export function updateCollaborationResponseStatus(
+  postId: string,
+  responseId: string,
+  status: Exclude<CollaborationResponseStatus, "Pending">,
+) {
+  return apiFetch<{
+    message: string;
+    response: CollaborationResponse;
+  }>(
+    `/chapter/collaborations/${postId}/responses/${responseId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
     },
   );
 }

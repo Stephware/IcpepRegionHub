@@ -1,4 +1,8 @@
 export type CollaborationStatus = "Open" | "Closed" | "Expired";
+export type CollaborationResponseStatus =
+  | "Pending"
+  | "Accepted"
+  | "Declined";
 
 export type CollaborationChapter = {
   chapterId: string;
@@ -30,6 +34,19 @@ export type CollaborationPost = {
   updatedAt: string | null;
   chapter: CollaborationChapter;
   createdBy: CollaborationCreator;
+};
+
+export type CollaborationResponse = {
+  collaborationResponseId: string;
+  collaborationPostId: string;
+  message: string | null;
+  status: CollaborationResponseStatus;
+  createdAt: string;
+  updatedAt: string | null;
+  chapter: CollaborationChapter;
+  user: CollaborationCreator & {
+    email: string;
+  };
 };
 
 export type CollaborationPostInput = {

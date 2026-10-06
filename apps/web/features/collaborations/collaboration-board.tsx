@@ -418,6 +418,12 @@ export function CollaborationBoard() {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
+                      <Link
+                        className="rounded-lg border border-teal-300 px-3 py-2 text-xs font-medium text-teal-700"
+                        href={`/collaborations/manage/${post.collaborationPostId}`}
+                      >
+                        Manage responses
+                      </Link>
                       {post.status === "Open" ? (
                         <>
                           <button
