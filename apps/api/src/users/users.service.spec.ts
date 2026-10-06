@@ -23,6 +23,7 @@ const pendingUser = {
   createdAt: new Date("2026-10-06T00:00:00.000Z"),
   updatedAt: null,
   chapter,
+  passwordHash: "must-never-be-returned",
 };
 
 function createService() {
@@ -43,6 +44,21 @@ function createService() {
 }
 
 describe("UsersService account administration", () => {
+  it("does not expose password hashes when listing users", async () => {
+    const { prisma, service } = createService();
+    prisma.user.findMany.mockResolvedValue([pendingUser]);
+
+    const result = await service.listUsers();
+
+    expect(result[0]).not.toHaveProperty("passwordHash");
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        userId: "10",
+        email: "juan@example.com",
+      }),
+    );
+  });
+
   it("lists only pending active accounts", async () => {
     const { prisma, service } = createService();
     prisma.user.findMany.mockResolvedValue([pendingUser]);
@@ -123,5 +139,48 @@ describe("UsersService account administration", () => {
       BadRequestException,
     );
     expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("deactivates an existing account", async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({ userId: 10n });
+    prisma.user.update.mockResolvedValue({
+      ...pendingUser,
+      isApproved: true,
+      isActive: false,
+    });
+
+    const result = await service.setActive(10n, false);
+
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 10n },
+        data: { isActive: false },
+      }),
+    );
+    expect(result.user.isActive).toBe(false);
+  });
+
+  it("changes an existing account role", async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({ userId: 10n });
+    prisma.user.update.mockResolvedValue({
+      ...pendingUser,
+      role: UserRole.RegionalOfficer,
+      isApproved: true,
+    });
+
+    const result = await service.changeRole(
+      10n,
+      UserRole.RegionalOfficer,
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 10n },
+        data: { role: UserRole.RegionalOfficer },
+      }),
+    );
+    expect(result.user.role).toBe(UserRole.RegionalOfficer);
   });
 });
