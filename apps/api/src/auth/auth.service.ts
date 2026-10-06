@@ -8,13 +8,17 @@ import { promisify } from "node:util";
 import { UsersService } from "../users/users.service.js";
 import { LoginDto } from "./dto/login.dto.js";
 import { RegisterDto } from "./dto/register.dto.js";
+import { SessionTokenService } from "./session-token.service.js";
 
 const scrypt = promisify(scryptCallback);
 const HASH_KEY_LENGTH = 64;
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly tokenService: SessionTokenService,
+  ) {}
 
   async register(input: RegisterDto) {
     const existingUser = await this.usersService.findByEmail(input.email);
@@ -35,6 +39,28 @@ export class AuthService {
 
     return {
       message: "Registration submitted. Your account must be approved before you can sign in.",
+      user: this.toPublicUser(user),
+    };
+  }
+
+  async login(input: LoginDto) {
+    const user = await this.validateCredentials(input);
+
+    if (!user.isApproved) {
+      throw new UnauthorizedException(
+        "Your account is still waiting for regional approval.",
+      );
+    }
+
+    const accessToken = this.tokenService.sign({
+      sub: user.userId.toString(),
+      role: user.role,
+      chapterId: user.chapterId?.toString() ?? null,
+    });
+
+    return {
+      accessToken,
+      tokenType: "Bearer",
       user: this.toPublicUser(user),
     };
   }
