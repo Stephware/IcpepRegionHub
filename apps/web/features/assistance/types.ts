@@ -1,5 +1,12 @@
 export type AssistancePriority = "Low" | "Normal" | "High" | "Urgent";
 
+export type AssistanceStatus =
+  | "Submitted"
+  | "Under Review"
+  | "In Progress"
+  | "Resolved"
+  | "Closed";
+
 export type AssistanceChapter = {
   chapterId: string;
   schoolName: string;
@@ -19,7 +26,7 @@ export type AssistanceRequestSummary = {
   category: string;
   subject: string;
   priority: AssistancePriority;
-  status: string;
+  status: AssistanceStatus;
   submittedAt: string;
   resolvedAt: string | null;
   updatedAt: string | null;
@@ -33,7 +40,7 @@ export type AssistanceRequestSummary = {
 export type AssistanceUpdate = {
   updateId: string;
   message: string;
-  newStatus: string | null;
+  newStatus: AssistanceStatus | null;
   createdAt: string;
   user: AssistancePerson;
 };
@@ -43,9 +50,29 @@ export type AssistanceRequestDetails = AssistanceRequestSummary & {
   updates: AssistanceUpdate[];
 };
 
+export type RegionalAssistanceUpdate = AssistanceUpdate & {
+  isInternalNote: boolean;
+};
+
+export type RegionalAssistanceRequestDetails = AssistanceRequestSummary & {
+  description: string;
+  updates: RegionalAssistanceUpdate[];
+};
+
+export type RegionalAssignee = AssistancePerson & {
+  email: string;
+  role: "RegionalAdmin" | "RegionalOfficer";
+};
+
 export type AssistanceRequestInput = {
   category: string;
   subject: string;
   description: string;
   priority: AssistancePriority;
+};
+
+export type RegionalAssistanceFilters = {
+  status?: AssistanceStatus;
+  priority?: AssistancePriority;
+  chapterId?: string;
 };

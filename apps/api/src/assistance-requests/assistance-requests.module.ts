@@ -4,10 +4,14 @@ import { PrismaModule } from "../prisma/prisma.module.js";
 import { UsersModule } from "../users/users.module.js";
 import { AssistanceRequestsController } from "./assistance-requests.controller.js";
 import { AssistanceRequestsService } from "./assistance-requests.service.js";
+import { RegionalAssistanceRequestsController } from "./regional-assistance-requests.controller.js";
 
 @Module({
   imports: [PrismaModule, AuthModule, UsersModule],
-  controllers: [AssistanceRequestsController],
+  controllers: [
+    AssistanceRequestsController,
+    RegionalAssistanceRequestsController,
+  ],
   providers: [AssistanceRequestsService],
   exports: [AssistanceRequestsService],
 })

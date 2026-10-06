@@ -52,6 +52,15 @@ export function MainNav() {
             >
               Collaborations
             </Link>
+            {user.role === "RegionalAdmin" ||
+            user.role === "RegionalOfficer" ? (
+              <Link
+                className="text-sm font-medium text-slate-700 hover:text-slate-950"
+                href="/regional/assistance"
+              >
+                Regional Assistance
+              </Link>
+            ) : null}
             {user.role === "RegionalAdmin" ? (
               <Link
                 className="text-sm font-medium text-slate-700 hover:text-slate-950"
