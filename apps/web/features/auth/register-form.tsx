@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { ChapterSelect } from "@/features/chapters/chapter-select";
 import { useAuth } from "./auth-context";
 
 export function RegisterForm() {
@@ -94,20 +95,13 @@ export function RegisterForm() {
 
       <div>
         <label className="text-sm font-medium text-slate-800" htmlFor="chapterId">
-          Chapter ID
+          Chapter
         </label>
-        <input
-          className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-teal-700"
-          id="chapterId"
-          min="1"
-          onChange={(event) => updateField("chapterId", event.target.value)}
+        <ChapterSelect
+          onChange={(value) => updateField("chapterId", value)}
           required
-          type="number"
           value={form.chapterId}
         />
-        <p className="mt-2 text-xs leading-5 text-slate-500">
-          This is temporary until the Chapter Directory supplies a chapter picker.
-        </p>
       </div>
 
       <div>
@@ -144,7 +138,7 @@ export function RegisterForm() {
 
       <button
         className="w-full rounded-lg bg-teal-700 px-4 py-2.5 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={submitting}
+        disabled={submitting || !form.chapterId}
         type="submit"
       >
         {submitting ? "Submitting..." : "Register account"}
