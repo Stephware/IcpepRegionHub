@@ -3,10 +3,15 @@ import {
   ConflictException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { scryptSync } from "node:crypto";
 import { UserRole } from "../common/constants/roles.js";
 import type { UsersService } from "../users/users.service.js";
 import { AuthService } from "./auth.service.js";
 import type { SessionTokenService } from "./session-token.service.js";
+
+const password = "password123";
+const salt = "0123456789abcdef0123456789abcdef";
+const passwordHash = `scrypt:${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
 
 const activeUser = {
   userId: 10n,
@@ -14,8 +19,7 @@ const activeUser = {
   firstName: "Juan",
   lastName: "Dela Cruz",
   email: "juan@example.com",
-  passwordHash:
-    "scrypt:22f448350305132056c0760192152391:ad7ced138f0069933ae6626316c2e57acc5d9c95282408028b1f7358d5a8af6f762675398a70e4dc143843b368e1d662ce86b5667e44fccf9e89b197d95f28a",
+  passwordHash,
   role: UserRole.ChapterOfficer,
   isApproved: true,
   isActive: true,
@@ -50,7 +54,7 @@ describe("AuthService", () => {
         firstName: "Juan",
         lastName: "Dela Cruz",
         email: "juan@example.com",
-        password: "password123",
+        password,
         chapterId: "1",
       }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -68,7 +72,7 @@ describe("AuthService", () => {
     await expect(
       service.login({
         email: "juan@example.com",
-        password: "password123",
+        password,
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
@@ -85,7 +89,7 @@ describe("AuthService", () => {
     await expect(
       service.login({
         email: "juan@example.com",
-        password: "password123",
+        password,
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
@@ -104,5 +108,32 @@ describe("AuthService", () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(tokenService.sign).not.toHaveBeenCalled();
+  });
+
+  it("issues a token to an approved active user", async () => {
+    const { usersService, tokenService, service } = createService();
+    usersService.findByEmail.mockResolvedValue(activeUser);
+
+    const result = await service.login({
+      email: "juan@example.com",
+      password,
+    });
+
+    expect(tokenService.sign).toHaveBeenCalledWith({
+      sub: "10",
+      role: UserRole.ChapterOfficer,
+      chapterId: "1",
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        accessToken: "signed-token",
+        tokenType: "Bearer",
+        user: expect.objectContaining({
+          userId: "10",
+          email: "juan@example.com",
+        }),
+      }),
+    );
+    expect(result.user).not.toHaveProperty("passwordHash");
   });
 });
