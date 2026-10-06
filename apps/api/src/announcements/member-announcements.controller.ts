@@ -1,18 +1,26 @@
-import { BadRequestException, Controller, Get, Param } from "@nestjs/common";
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+} from "@nestjs/common";
+import { AuthGuard } from "../common/guards/auth.guard.js";
 import { AnnouncementsService } from "./announcements.service.js";
 
-@Controller("announcements")
-export class AnnouncementsController {
+@Controller("member/announcements")
+@UseGuards(AuthGuard)
+export class MemberAnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Get()
   listAnnouncements() {
-    return this.announcementsService.listPublicAnnouncements();
+    return this.announcementsService.listMemberAnnouncements();
   }
 
   @Get(":id")
   getAnnouncement(@Param("id") id: string) {
-    return this.announcementsService.getPublicAnnouncement(this.parseId(id));
+    return this.announcementsService.getMemberAnnouncement(this.parseId(id));
   }
 
   private parseId(id: string) {

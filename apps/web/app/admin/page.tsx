@@ -27,6 +27,17 @@ export default function AdminPage() {
               officer records.
             </p>
           </Link>
+
+          <Link
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-teal-300"
+            href="/admin/announcements"
+          >
+            <h2 className="font-semibold text-slate-950">Announcements</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Create drafts, publish regional announcements, control visibility,
+              and pin important updates.
+            </p>
+          </Link>
         </div>
       </main>
     </ProtectedRoute>
