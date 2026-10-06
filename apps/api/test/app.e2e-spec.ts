@@ -7,6 +7,7 @@ import { AuthController } from "../src/auth/auth.controller.js";
 import { AuthService } from "../src/auth/auth.service.js";
 import { SessionTokenService } from "../src/auth/session-token.service.js";
 import { AuthGuard } from "../src/common/guards/auth.guard.js";
+import { UsersService } from "../src/users/users.service.js";
 
 describe("API end-to-end behavior", () => {
   let app: INestApplication;
@@ -80,9 +81,9 @@ describe("API end-to-end behavior", () => {
           useValue: tokenService,
         },
         {
-          provide: AuthGuard,
+          provide: UsersService,
           useValue: {
-            canActivate: () => true,
+            findById: async () => null,
           },
         },
       ],
