@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   addRegionalAssistanceUpdate,
   assignRegionalAssistanceRequest,
@@ -54,17 +54,6 @@ export function RegionalAssistanceManager() {
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-
-  const loadOverview = useCallback(async () => {
-    const [requestItems, userItems] = await Promise.all([
-      listRegionalAssistanceRequests(),
-      listRegionalAssignees(),
-    ]);
-
-    setAllRequests(requestItems);
-    setRequests(requestItems);
-    setAssignees(userItems);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
