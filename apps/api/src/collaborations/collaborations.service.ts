@@ -106,6 +106,115 @@ const responseInclude = {
 export class CollaborationsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listAdminPosts() {
+    const posts = await this.prisma.collaborationPost.findMany({
+      include: {
+        ...postInclude,
+        _count: {
+          select: {
+            responses: true,
+          },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
+    });
+
+    return posts.map((post) => ({
+      ...this.toPost(post),
+      responseCount: post._count.responses,
+    }));
+  }
+
+  async getAdminPost(collaborationPostId: bigint) {
+    const post = await this.prisma.collaborationPost.findUnique({
+      where: { collaborationPostId },
+      include: {
+        ...postInclude,
+        responses: {
+          include: responseInclude,
+          orderBy: {
+            createdAt: "desc",
+          },
+        },
+        _count: {
+          select: {
+            responses: true,
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException("Collaboration post was not found.");
+    }
+
+    return {
+      ...this.toPost(post),
+      responseCount: post._count.responses,
+      responses: post.responses.map((response) => this.toResponse(response)),
+    };
+  }
+
+  async setAdminPostStatus(
+    collaborationPostId: bigint,
+    status: "Open" | "Closed",
+  ) {
+    const existing = await this.prisma.collaborationPost.findUnique({
+      where: { collaborationPostId },
+      include: postInclude,
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Collaboration post was not found.");
+    }
+
+    if (
+      status === "Open" &&
+      existing.expiresAt &&
+      existing.expiresAt.getTime() <= Date.now()
+    ) {
+      throw new BadRequestException(
+        "An expired collaboration post cannot be reopened.",
+      );
+    }
+
+    const post = await this.prisma.collaborationPost.update({
+      where: { collaborationPostId },
+      data: {
+        status,
+        updatedAt: new Date(),
+      },
+      include: postInclude,
+    });
+
+    return {
+      message:
+        status === "Open"
+          ? "Collaboration post reopened successfully."
+          : "Collaboration post closed successfully.",
+      post: this.toPost(post),
+    };
+  }
+
+  async deleteAdminPost(collaborationPostId: bigint) {
+    const post = await this.prisma.collaborationPost.findUnique({
+      where: { collaborationPostId },
+      select: { collaborationPostId: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException("Collaboration post was not found.");
+    }
+
+    await this.prisma.collaborationPost.delete({
+      where: { collaborationPostId },
+    });
+
+    return {
+      message: "Collaboration post deleted successfully.",
+    };
+  }
+
   async listOpenPosts(query: ListCollaborationsQueryDto) {
     const now = new Date();
     const type = query.type?.trim();

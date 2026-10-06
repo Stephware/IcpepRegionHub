@@ -251,7 +251,8 @@ function RegionalAdminDashboard({
           { href: "/admin/chapters", label: "Manage chapters" },
           { href: "/admin/announcements", label: "Manage announcements" },
           { href: "/admin/events", label: "Manage events" },
-          { href: "/regional/assistance", label: "Manage assistance" },
+          { href: "/admin/assistance", label: "Manage assistance" },
+          { href: "/admin/collaborations", label: "Moderate collaborations" },
         ]}
       />
 
@@ -511,7 +512,7 @@ function PendingAccountsPanel({
   accounts: Extract<DashboardData, { role: "RegionalAdmin" }>["data"]["pendingAccounts"];
 }) {
   return (
-    <Panel href="/admin" title="Pending account approvals">
+    <Panel href="/admin/accounts" title="Pending account approvals">
       {accounts.length ? (
         <div className="space-y-4">
           {accounts.map((account) => (

@@ -3,6 +3,7 @@ import { AuthModule } from "../auth/auth.module.js";
 import { PrismaModule } from "../prisma/prisma.module.js";
 import { UsersModule } from "../users/users.module.js";
 import { ChapterCollaborationsController } from "./chapter-collaborations.controller.js";
+import { CollaborationAdminController } from "./collaboration-admin.controller.js";
 import { CollaborationsController } from "./collaborations.controller.js";
 import { CollaborationsService } from "./collaborations.service.js";
 
@@ -11,6 +12,7 @@ import { CollaborationsService } from "./collaborations.service.js";
   controllers: [
     CollaborationsController,
     ChapterCollaborationsController,
+    CollaborationAdminController,
   ],
   providers: [CollaborationsService],
   exports: [CollaborationsService],
