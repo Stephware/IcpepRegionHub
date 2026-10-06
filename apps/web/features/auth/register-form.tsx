@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { ChapterSelect } from "@/features/chapters/chapter-select";
+import { Alert } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/form-controls";
 import { useAuth } from "./auth-context";
 
 export function RegisterForm() {
@@ -52,65 +55,47 @@ export function RegisterForm() {
   return (
     <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
       <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className="text-sm font-medium text-slate-800" htmlFor="firstName">
-            First name
-          </label>
-          <input
-            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-teal-700"
+        <Field label="First name">
+          <Input
             id="firstName"
             onChange={(event) => updateField("firstName", event.target.value)}
             required
             value={form.firstName}
           />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-slate-800" htmlFor="lastName">
-            Last name
-          </label>
-          <input
-            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-teal-700"
+        </Field>
+
+        <Field label="Last name">
+          <Input
             id="lastName"
             onChange={(event) => updateField("lastName", event.target.value)}
             required
             value={form.lastName}
           />
-        </div>
+        </Field>
       </div>
 
-      <div>
-        <label className="text-sm font-medium text-slate-800" htmlFor="registerEmail">
-          Email
-        </label>
-        <input
+      <Field label="Email">
+        <Input
           autoComplete="email"
-          className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-teal-700"
           id="registerEmail"
           onChange={(event) => updateField("email", event.target.value)}
           required
           type="email"
           value={form.email}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label className="text-sm font-medium text-slate-800" htmlFor="chapterId">
-          Chapter
-        </label>
+      <Field label="Chapter">
         <ChapterSelect
           onChange={(value) => updateField("chapterId", value)}
           required
           value={form.chapterId}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label className="text-sm font-medium text-slate-800" htmlFor="registerPassword">
-          Password
-        </label>
-        <input
+      <Field label="Password" hint="Use at least 8 characters.">
+        <Input
           autoComplete="new-password"
-          className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-teal-700"
           id="registerPassword"
           minLength={8}
           onChange={(event) => updateField("password", event.target.value)}
@@ -118,35 +103,30 @@ export function RegisterForm() {
           type="password"
           value={form.password}
         />
-        <p className="mt-2 text-xs text-slate-500">Use at least 8 characters.</p>
-      </div>
+      </Field>
 
-      {error ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
       {success ? (
-        <div className="rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
+        <Alert tone="success">
           <p>{success}</p>
           <p className="mt-1">
             A Regional Admin must approve the account before you can sign in.
           </p>
-        </div>
+        </Alert>
       ) : null}
 
-      <button
-        className="w-full rounded-lg bg-teal-700 px-4 py-2.5 font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+      <Button
         disabled={submitting || !form.chapterId}
+        fullWidth
         type="submit"
       >
         {submitting ? "Submitting..." : "Register account"}
-      </button>
+      </Button>
 
       <p className="text-center text-sm text-slate-600">
         Already approved?{" "}
-        <Link className="font-medium text-teal-700" href="/login">
+        <Link className="font-medium text-teal-700 hover:underline" href="/login">
           Sign in
         </Link>
       </p>

@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   deleteAdminCollaborationPost,
   getAdminCollaborationPost,
@@ -30,6 +33,8 @@ export function CollaborationAdminManager() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [deleteTarget, setDeleteTarget] =
+    useState<AdminCollaborationPostDetails | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -116,14 +121,6 @@ export function CollaborationAdminManager() {
   }
 
   async function removePost(post: AdminCollaborationPostDetails) {
-    if (
-      !window.confirm(
-        `Delete "${post.title}"? This also removes its responses.`,
-      )
-    ) {
-      return;
-    }
-
     setActionLoading(true);
     setError("");
     setNotice("");
@@ -134,6 +131,7 @@ export function CollaborationAdminManager() {
       );
       setNotice(result.message);
       setSelected(null);
+      setDeleteTarget(null);
       await refresh();
     } catch (requestError) {
       setError(
@@ -148,9 +146,9 @@ export function CollaborationAdminManager() {
 
   if (loading) {
     return (
-      <p className="mt-8 text-sm text-slate-600">
-        Loading collaboration moderation...
-      </p>
+      <div className="mt-8">
+        <LoadingState label="Loading collaboration moderation..." />
+      </div>
     );
   }
 
@@ -173,17 +171,8 @@ export function CollaborationAdminManager() {
         ))}
       </div>
 
-      {error ? (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-
-      {notice ? (
-        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {notice}
-        </p>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {notice ? <Alert tone="success">{notice}</Alert> : null}
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -273,14 +262,13 @@ export function CollaborationAdminManager() {
                         {selected.status === "Open" ? "Close post" : "Reopen post"}
                       </button>
                     ) : null}
-                    <button
-                      className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 disabled:opacity-60"
+                    <Button
                       disabled={actionLoading}
-                      onClick={() => void removePost(selected)}
-                      type="button"
+                      onClick={() => setDeleteTarget(selected)}
+                      variant="danger"
                     >
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -341,18 +329,31 @@ export function CollaborationAdminManager() {
               </section>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
-              <p className="font-medium text-slate-900">
-                Select a collaboration post
-              </p>
-              <p className="mt-2 text-sm text-slate-600">
-                Review post details and responses, then close, reopen, or delete
-                the post when moderation is needed.
-              </p>
-            </div>
+            <EmptyState
+              description="Review post details and responses, then close, reopen, or delete the post when moderation is needed."
+              title="Select a collaboration post"
+            />
           )}
         </section>
       </div>
+      <ConfirmDialog
+        busy={actionLoading}
+        confirmLabel="Delete post"
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.title}"? This also removes its responses.`
+            : ""
+        }
+        destructive
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) {
+            void removePost(deleteTarget);
+          }
+        }}
+        open={Boolean(deleteTarget)}
+        title="Delete collaboration post?"
+      />
     </div>
   );
 }

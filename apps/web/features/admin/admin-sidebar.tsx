@@ -21,7 +21,10 @@ export function AdminSidebar() {
       <p className="px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-500">
         Admin Portal
       </p>
-      <nav aria-label="Admin navigation" className="mt-1 grid gap-1">
+      <nav
+        aria-label="Admin navigation"
+        className="mt-1 flex gap-1 overflow-x-auto pb-1 lg:grid lg:overflow-visible lg:pb-0"
+      >
         {items.map((item) => {
           const active =
             item.href === "/admin"
@@ -30,7 +33,7 @@ export function AdminSidebar() {
 
           return (
             <Link
-              className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+              className={`whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 active
                   ? "bg-teal-50 text-teal-800"
                   : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
