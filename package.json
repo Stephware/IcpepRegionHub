@@ -14,7 +14,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "npm run test:e2e --workspace @icpep-region3-hub/api"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
