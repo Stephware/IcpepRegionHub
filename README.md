@@ -297,10 +297,11 @@ Before production deployment, configure real secrets, HTTPS, production database
 GitHub Actions runs on pushes to `main` and pull requests. The CI pipeline performs:
 
 1. Dependency installation
-2. Linting
-3. Unit tests
-4. API end-to-end tests
-5. Production builds
+2. High/critical production-runtime dependency audit
+3. Linting
+4. Unit tests
+5. API end-to-end tests
+6. Production builds
 
 ## Development Status
 
