@@ -38,6 +38,12 @@ export function MainNav() {
 
         {user ? (
           <>
+            <Link
+              className="text-sm font-medium text-slate-700 hover:text-slate-950"
+              href="/dashboard"
+            >
+              Dashboard
+            </Link>
             {user.role === "ChapterOfficer" ? (
               <Link
                 className="text-sm font-medium text-slate-700 hover:text-slate-950"

@@ -19,8 +19,8 @@ export function LoginForm() {
     setSubmitting(true);
 
     try {
-      const user = await login({ email, password });
-      router.replace(user.role === "RegionalAdmin" ? "/admin" : "/");
+      await login({ email, password });
+      router.replace("/dashboard");
     } catch (requestError) {
       setError(
         requestError instanceof Error
