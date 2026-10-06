@@ -38,6 +38,17 @@ export default function AdminPage() {
               and pin important updates.
             </p>
           </Link>
+
+          <Link
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-teal-300"
+            href="/admin/events"
+          >
+            <h2 className="font-semibold text-slate-950">Calendar & Events</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Create regional or chapter events, publish schedules, and manage
+              registration details and cancellations.
+            </p>
+          </Link>
         </div>
       </main>
     </ProtectedRoute>
