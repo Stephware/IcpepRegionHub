@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+export const SESSION_COOKIE_NAME = "icpep_session";
+
 export type AuthTokenPayload = {
   sub: string;
   role: string;
@@ -21,7 +23,9 @@ export class SessionTokenService {
       exp: Math.floor(Date.now() / 1000) + TOKEN_LIFETIME_SECONDS,
     };
 
-    const encodedPayload = Buffer.from(JSON.stringify(tokenPayload)).toString("base64url");
+    const encodedPayload = Buffer.from(JSON.stringify(tokenPayload)).toString(
+      "base64url",
+    );
     const signature = this.createSignature(encodedPayload);
 
     return `${encodedPayload}.${signature}`;
@@ -55,11 +59,41 @@ export class SessionTokenService {
       throw new UnauthorizedException("Invalid authentication token.");
     }
 
-    if (!payload.sub || !payload.role || payload.exp <= Math.floor(Date.now() / 1000)) {
+    if (
+      !payload.sub ||
+      !payload.role ||
+      payload.exp <= Math.floor(Date.now() / 1000)
+    ) {
       throw new UnauthorizedException("Authentication token has expired.");
     }
 
     return payload;
+  }
+
+  createSessionCookie(token: string) {
+    return [
+      `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}`,
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax",
+      `Max-Age=${TOKEN_LIFETIME_SECONDS}`,
+      this.isProduction() ? "Secure" : "",
+    ]
+      .filter(Boolean)
+      .join("; ");
+  }
+
+  createClearSessionCookie() {
+    return [
+      `${SESSION_COOKIE_NAME}=`,
+      "HttpOnly",
+      "Path=/",
+      "SameSite=Lax",
+      "Max-Age=0",
+      this.isProduction() ? "Secure" : "",
+    ]
+      .filter(Boolean)
+      .join("; ");
   }
 
   private createSignature(value: string) {
@@ -78,5 +112,9 @@ export class SessionTokenService {
     }
 
     return secret;
+  }
+
+  private isProduction() {
+    return this.configService.get<string>("NODE_ENV") === "production";
   }
 }

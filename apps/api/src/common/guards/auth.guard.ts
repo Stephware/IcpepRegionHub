@@ -4,8 +4,11 @@ import {
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
+import {
+  SESSION_COOKIE_NAME,
+  SessionTokenService,
+} from "../../auth/session-token.service.js";
 import { UsersService } from "../../users/users.service.js";
-import { SessionTokenService } from "../../auth/session-token.service.js";
 
 export type AuthenticatedUser = {
   userId: string;
@@ -19,6 +22,7 @@ export type AuthenticatedUser = {
 type AuthenticatedRequest = {
   headers: {
     authorization?: string;
+    cookie?: string;
   };
   user?: AuthenticatedUser;
 };
@@ -32,13 +36,12 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const authorization = request.headers.authorization;
+    const token = this.extractToken(request);
 
-    if (!authorization?.startsWith("Bearer ")) {
+    if (!token) {
       throw new UnauthorizedException("Authentication is required.");
     }
 
-    const token = authorization.slice("Bearer ".length).trim();
     const payload = this.tokenService.verify(token);
 
     let userId: bigint;
@@ -65,5 +68,36 @@ export class AuthGuard implements CanActivate {
     };
 
     return true;
+  }
+
+  private extractToken(request: AuthenticatedRequest) {
+    const authorization = request.headers.authorization;
+
+    if (authorization?.startsWith("Bearer ")) {
+      return authorization.slice("Bearer ".length).trim();
+    }
+
+    const cookieHeader = request.headers.cookie;
+
+    if (!cookieHeader) {
+      return null;
+    }
+
+    const sessionCookie = cookieHeader
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${SESSION_COOKIE_NAME}=`));
+
+    if (!sessionCookie) {
+      return null;
+    }
+
+    const rawValue = sessionCookie.slice(SESSION_COOKIE_NAME.length + 1);
+
+    try {
+      return decodeURIComponent(rawValue);
+    } catch {
+      throw new UnauthorizedException("Invalid authentication cookie.");
+    }
   }
 }

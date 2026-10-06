@@ -3,7 +3,12 @@ export const publicRoutes = {
   announcements: "/announcements",
   events: "/events",
   chapters: "/chapters",
+  login: "/login",
+  register: "/register",
+} as const;
+
+export const protectedRoutes = {
   assistance: "/assistance",
   collaborations: "/collaborations",
-  login: "/login",
+  admin: "/admin",
 } as const;

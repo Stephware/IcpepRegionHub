@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { MainNav } from "@/components/navigation/main-nav";
+import { AuthProvider } from "@/features/auth/auth-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +15,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <header className="border-b border-slate-200 bg-white">
+            <MainNav />
+          </header>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }
