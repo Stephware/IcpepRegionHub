@@ -120,9 +120,15 @@ export class SessionTokenService {
   private getSecret() {
     const secret = this.configService.get<string>("JWT_SECRET");
 
-    if (!secret || secret === "replace-with-secure-secret") {
+    if (!secret || secret.startsWith("CHANGE_ME")) {
       throw new Error(
         "JWT_SECRET must be configured with a secure value before authentication can be used.",
+      );
+    }
+
+    if (secret.length < 32) {
+      throw new Error(
+        "JWT_SECRET must be at least 32 characters long.",
       );
     }
 
