@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/features/auth/auth-context";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 
 const publicItems = [
   { href: "/announcements", label: "Announcements" },
@@ -12,94 +15,189 @@ const publicItems = [
 
 export function MainNav() {
   const { user, loading, logout } = useAuth();
+  const pathname = usePathname();
   const router = useRouter();
+  const [open, setOpen] = useState(false);
 
   async function handleLogout() {
+    setOpen(false);
     await logout();
     router.replace("/");
   }
 
+  function navLinkClass(href: string) {
+    const active =
+      href === "/"
+        ? pathname === href
+        : pathname === href || pathname.startsWith(`${href}/`);
+
+    return cn(
+      "rounded-md px-2 py-1.5 text-sm font-medium transition",
+      active
+        ? "bg-teal-50 text-teal-800"
+        : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+    );
+  }
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-      <Link className="font-semibold text-slate-950" href="/">
-        ICpEP Region 3 Hub
-      </Link>
+    <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          className="font-semibold tracking-tight text-slate-950"
+          href="/"
+          onClick={() => setOpen(false)}
+        >
+          ICpEP Region 3 Hub
+        </Link>
 
-      <nav aria-label="Primary navigation" className="flex flex-wrap items-center gap-4">
-        {publicItems.map((item) => (
-          <Link
-            className="text-sm font-medium text-slate-700 hover:text-slate-950"
-            href={item.href}
-            key={item.href}
-          >
-            {item.label}
-          </Link>
-        ))}
+        <Button
+          aria-expanded={open}
+          aria-label="Toggle navigation"
+          className="md:hidden"
+          onClick={() => setOpen((current) => !current)}
+          size="sm"
+          variant="secondary"
+        >
+          {open ? "Close" : "Menu"}
+        </Button>
 
-        {user ? (
-          <>
-            <Link
-              className="text-sm font-medium text-slate-700 hover:text-slate-950"
-              href="/dashboard"
-            >
-              Dashboard
-            </Link>
-            {user.role === "ChapterOfficer" ? (
-              <Link
-                className="text-sm font-medium text-slate-700 hover:text-slate-950"
-                href="/assistance"
-              >
-                Assistance
-              </Link>
-            ) : null}
-            <Link
-              className="text-sm font-medium text-slate-700 hover:text-slate-950"
-              href="/collaborations"
-            >
-              Collaborations
-            </Link>
-            {user.role === "RegionalAdmin" ||
-            user.role === "RegionalOfficer" ? (
-              <Link
-                className="text-sm font-medium text-slate-700 hover:text-slate-950"
-                href="/regional/assistance"
-              >
-                Regional Assistance
-              </Link>
-            ) : null}
-            {user.role === "RegionalAdmin" ? (
-              <Link
-                className="text-sm font-medium text-slate-700 hover:text-slate-950"
-                href="/admin"
-              >
-                Admin
-              </Link>
-            ) : null}
-            <span className="hidden text-sm text-slate-500 md:inline">
-              {user.firstName} {user.lastName}
-            </span>
-            <button
-              className="text-sm font-medium text-teal-700 hover:text-teal-900"
-              onClick={() => void handleLogout()}
-              type="button"
-            >
-              Sign out
-            </button>
-          </>
-        ) : !loading ? (
-          <>
-            <Link className="text-sm font-medium text-teal-700" href="/login">
-              Sign in
-            </Link>
-            <Link
-              className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white"
-              href="/register"
-            >
-              Register
-            </Link>
-          </>
-        ) : null}
-      </nav>
+        <nav
+          aria-label="Primary navigation"
+          className="hidden items-center gap-1 md:flex"
+        >
+          <NavItems
+            loading={loading}
+            navLinkClass={navLinkClass}
+            onNavigate={() => setOpen(false)}
+            onSignOut={handleLogout}
+            user={user}
+          />
+        </nav>
+      </div>
+
+      {open ? (
+        <nav
+          aria-label="Mobile navigation"
+          className="mt-3 grid gap-1 border-t border-slate-200 pt-3 md:hidden"
+        >
+          <NavItems
+            loading={loading}
+            navLinkClass={navLinkClass}
+            onNavigate={() => setOpen(false)}
+            onSignOut={handleLogout}
+            user={user}
+          />
+        </nav>
+      ) : null}
     </div>
+  );
+}
+
+function NavItems({
+  user,
+  loading,
+  navLinkClass,
+  onNavigate,
+  onSignOut,
+}: {
+  user: ReturnType<typeof useAuth>["user"];
+  loading: boolean;
+  navLinkClass(href: string): string;
+  onNavigate(): void;
+  onSignOut(): Promise<void>;
+}) {
+  return (
+    <>
+      {publicItems.map((item) => (
+        <Link
+          className={navLinkClass(item.href)}
+          href={item.href}
+          key={item.href}
+          onClick={onNavigate}
+        >
+          {item.label}
+        </Link>
+      ))}
+
+      {user ? (
+        <>
+          <Link
+            className={navLinkClass("/dashboard")}
+            href="/dashboard"
+            onClick={onNavigate}
+          >
+            Dashboard
+          </Link>
+
+          {user.role === "ChapterOfficer" ? (
+            <Link
+              className={navLinkClass("/assistance")}
+              href="/assistance"
+              onClick={onNavigate}
+            >
+              Assistance
+            </Link>
+          ) : null}
+
+          <Link
+            className={navLinkClass("/collaborations")}
+            href="/collaborations"
+            onClick={onNavigate}
+          >
+            Collaborations
+          </Link>
+
+          {user.role === "RegionalAdmin" ||
+          user.role === "RegionalOfficer" ? (
+            <Link
+              className={navLinkClass("/regional/assistance")}
+              href="/regional/assistance"
+              onClick={onNavigate}
+            >
+              Regional Assistance
+            </Link>
+          ) : null}
+
+          {user.role === "RegionalAdmin" ? (
+            <Link
+              className={navLinkClass("/admin")}
+              href="/admin"
+              onClick={onNavigate}
+            >
+              Admin
+            </Link>
+          ) : null}
+
+          <span className="px-2 py-1.5 text-sm text-slate-500">
+            {user.firstName} {user.lastName}
+          </span>
+
+          <button
+            className="rounded-md px-2 py-1.5 text-left text-sm font-medium text-teal-700 transition hover:bg-teal-50 hover:text-teal-900"
+            onClick={() => void onSignOut()}
+            type="button"
+          >
+            Sign out
+          </button>
+        </>
+      ) : !loading ? (
+        <>
+          <Link
+            className={navLinkClass("/login")}
+            href="/login"
+            onClick={onNavigate}
+          >
+            Sign in
+          </Link>
+          <Link
+            className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-teal-800"
+            href="/register"
+            onClick={onNavigate}
+          >
+            Register
+          </Link>
+        </>
+      ) : null}
+    </>
   );
 }
