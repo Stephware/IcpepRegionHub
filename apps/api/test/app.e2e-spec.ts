@@ -6,6 +6,7 @@ import { AnnouncementsService } from "../src/announcements/announcements.service
 import { AuthController } from "../src/auth/auth.controller.js";
 import { AuthService } from "../src/auth/auth.service.js";
 import { SessionTokenService } from "../src/auth/session-token.service.js";
+import { AuthGuard } from "../src/common/guards/auth.guard.js";
 
 describe("API end-to-end behavior", () => {
   let app: INestApplication;
@@ -77,6 +78,12 @@ describe("API end-to-end behavior", () => {
         {
           provide: SessionTokenService,
           useValue: tokenService,
+        },
+        {
+          provide: AuthGuard,
+          useValue: {
+            canActivate: () => true,
+          },
         },
       ],
     }).compile();
