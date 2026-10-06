@@ -58,13 +58,6 @@ const publicUserSelect = {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getStatus() {
-    return {
-      module: "users",
-      status: "ready" as const,
-    };
-  }
-
   findById(userId: bigint) {
     return this.prisma.user.findUnique({
       where: { userId },
@@ -82,7 +75,21 @@ export class UsersService {
     });
   }
 
-  createChapterOfficer(input: CreateChapterOfficerInput) {
+  async createChapterOfficer(input: CreateChapterOfficerInput) {
+    const chapter = await this.prisma.chapter.findUnique({
+      where: { chapterId: input.chapterId },
+      select: {
+        chapterId: true,
+        status: true,
+      },
+    });
+
+    if (!chapter || chapter.status !== "Active") {
+      throw new BadRequestException(
+        "Registration requires an active ICpEP Region 3 chapter.",
+      );
+    }
+
     return this.prisma.user.create({
       data: {
         chapterId: input.chapterId,

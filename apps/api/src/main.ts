@@ -15,7 +15,9 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
   });
+  app.enableShutdownHooks();
   app.setGlobalPrefix("api");
+  app.getHttpAdapter().getInstance().disable("x-powered-by");
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,

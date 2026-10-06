@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { UserRole } from "../common/constants/roles.js";
 
 export const SESSION_COOKIE_NAME = "icpep_session";
 
@@ -32,7 +33,13 @@ export class SessionTokenService {
   }
 
   verify(token: string): AuthTokenPayload {
-    const [encodedPayload, signature] = token.split(".");
+    const parts = token.split(".");
+
+    if (parts.length !== 2) {
+      throw new UnauthorizedException("Invalid authentication token.");
+    }
+
+    const [encodedPayload, signature] = parts;
 
     if (!encodedPayload || !signature) {
       throw new UnauthorizedException("Invalid authentication token.");
@@ -60,10 +67,18 @@ export class SessionTokenService {
     }
 
     if (
-      !payload.sub ||
-      !payload.role ||
-      payload.exp <= Math.floor(Date.now() / 1000)
+      !/^\d+$/.test(payload.sub) ||
+      BigInt(payload.sub) <= 0n ||
+      !Object.values(UserRole).includes(payload.role as UserRole) ||
+      (payload.chapterId !== null &&
+        (!/^\d+$/.test(payload.chapterId) ||
+          BigInt(payload.chapterId) <= 0n)) ||
+      !Number.isInteger(payload.exp)
     ) {
+      throw new UnauthorizedException("Invalid authentication token.");
+    }
+
+    if (payload.exp <= Math.floor(Date.now() / 1000)) {
       throw new UnauthorizedException("Authentication token has expired.");
     }
 
@@ -105,9 +120,15 @@ export class SessionTokenService {
   private getSecret() {
     const secret = this.configService.get<string>("JWT_SECRET");
 
-    if (!secret || secret === "replace-with-secure-secret") {
+    if (!secret || secret.startsWith("CHANGE_ME")) {
       throw new Error(
         "JWT_SECRET must be configured with a secure value before authentication can be used.",
+      );
+    }
+
+    if (secret.length < 32) {
+      throw new Error(
+        "JWT_SECRET must be at least 32 characters long.",
       );
     }
 
