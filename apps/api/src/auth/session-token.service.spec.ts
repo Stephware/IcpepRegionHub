@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
 import { UnauthorizedException } from "@nestjs/common";
 import type { ConfigService } from "@nestjs/config";
 import { UserRole } from "../common/constants/roles.js";
@@ -67,6 +67,43 @@ describe("SessionTokenService", () => {
 
     expect(() => service.verify(`${token}.extra`)).toThrow(
       UnauthorizedException,
+    );
+  });
+
+  it("rejects invalid signed claims", () => {
+    const service = createService();
+
+    const invalidUserToken = service.sign({
+      sub: "not-a-user-id",
+      role: UserRole.ChapterOfficer,
+      chapterId: "1",
+    });
+    const invalidRoleToken = service.sign({
+      sub: "10",
+      role: "NotARole",
+      chapterId: "1",
+    });
+
+    expect(() => service.verify(invalidUserToken)).toThrow(
+      UnauthorizedException,
+    );
+    expect(() => service.verify(invalidRoleToken)).toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it("rejects expired tokens", () => {
+    const service = createService();
+    const nowSpy = jest.spyOn(Date, "now").mockReturnValue(0);
+    const token = service.sign({
+      sub: "10",
+      role: UserRole.ChapterOfficer,
+      chapterId: "1",
+    });
+    nowSpy.mockRestore();
+
+    expect(() => service.verify(token)).toThrow(
+      "Authentication token has expired.",
     );
   });
 
