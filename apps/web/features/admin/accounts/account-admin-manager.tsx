@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { UserRole } from "@/features/auth/types";
+import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/form-controls";
+import { TableContainer } from "@/components/ui/table";
 import {
   approveAdminAccount,
   changeAdminAccountRole,
@@ -11,7 +16,6 @@ import {
 } from "./api";
 import {
   accountState,
-  accountStateClass,
   filterAdminAccounts,
   type AdminAccountFilter,
 } from "./helpers";
@@ -30,6 +34,19 @@ const roles: UserRole[] = [
   "RegionalOfficer",
   "RegionalAdmin",
 ];
+
+function stateVariant(state: string) {
+  switch (state) {
+    case "Active":
+      return "success" as const;
+    case "Pending":
+      return "warning" as const;
+    case "Rejected":
+      return "danger" as const;
+    default:
+      return "neutral" as const;
+  }
+}
 
 export function AccountAdminManager() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
@@ -101,76 +118,64 @@ export function AccountAdminManager() {
   }
 
   if (loading) {
-    return <p className="mt-8 text-sm text-slate-600">Loading accounts...</p>;
+    return (
+      <div className="mt-8">
+        <LoadingState label="Loading accounts..." />
+      </div>
+    );
   }
 
   return (
     <div className="mt-8 space-y-6">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Account filters">
         {filters.map((item) => (
-          <button
-            className={`rounded-lg px-3 py-2 text-sm font-medium ${
-              filter === item
-                ? "bg-teal-700 text-white"
-                : "border border-slate-300 bg-white text-slate-700"
-            }`}
+          <Button
             key={item}
             onClick={() => setFilter(item)}
-            type="button"
+            size="sm"
+            variant={filter === item ? "primary" : "secondary"}
           >
             {item}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {error ? (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
+      {notice ? <Alert tone="success">{notice}</Alert> : null}
 
-      {notice ? (
-        <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {notice}
-        </p>
-      ) : null}
-
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Account</th>
-              <th className="px-4 py-3">Chapter</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">State</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {visibleAccounts.length ? (
-              visibleAccounts.map((account) => {
+      {visibleAccounts.length ? (
+        <TableContainer>
+          <table className="min-w-full divide-y divide-slate-200 text-sm">
+            <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-4 py-3">Account</th>
+                <th className="px-4 py-3">Chapter</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">State</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {visibleAccounts.map((account) => {
                 const state = accountState(account);
                 const busy = actionId === account.userId;
 
                 return (
-                  <tr key={account.userId}>
+                  <tr className="align-top hover:bg-slate-50/70" key={account.userId}>
                     <td className="px-4 py-4">
                       <p className="font-medium text-slate-950">
                         {account.firstName} {account.lastName}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {account.email}
-                      </p>
+                      <p className="mt-1 text-xs text-slate-500">{account.email}</p>
                     </td>
                     <td className="px-4 py-4 text-slate-600">
                       {account.chapter
-                        ? account.chapter.acronym ??
-                          account.chapter.chapterName
+                        ? account.chapter.acronym ?? account.chapter.chapterName
                         : "Regional"}
                     </td>
                     <td className="px-4 py-4">
-                      <select
-                        className="rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm"
+                      <Select
+                        className="mt-0 min-w-44 py-2"
                         disabled={busy || state === "Pending" || state === "Rejected"}
                         onChange={(event) =>
                           void runAction(account, () =>
@@ -187,88 +192,80 @@ export function AccountAdminManager() {
                             {role}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </td>
                     <td className="px-4 py-4">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${accountStateClass(
-                          state,
-                        )}`}
-                      >
-                        {state}
-                      </span>
+                      <Badge variant={stateVariant(state)}>{state}</Badge>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-2">
                         {state === "Pending" ? (
                           <>
-                            <button
-                              className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-medium text-white disabled:opacity-60"
+                            <Button
                               disabled={busy}
                               onClick={() =>
                                 void runAction(account, () =>
                                   approveAdminAccount(account.userId),
                                 )
                               }
-                              type="button"
+                              size="sm"
                             >
                               Approve
-                            </button>
-                            <button
-                              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 disabled:opacity-60"
+                            </Button>
+                            <Button
                               disabled={busy}
                               onClick={() =>
                                 void runAction(account, () =>
                                   rejectAdminAccount(account.userId),
                                 )
                               }
-                              type="button"
+                              size="sm"
+                              variant="danger"
                             >
                               Reject
-                            </button>
+                            </Button>
                           </>
                         ) : state === "Active" ? (
-                          <button
-                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-60"
+                          <Button
                             disabled={busy}
                             onClick={() =>
                               void runAction(account, () =>
                                 setAdminAccountActive(account.userId, false),
                               )
                             }
-                            type="button"
+                            size="sm"
+                            variant="secondary"
                           >
                             Deactivate
-                          </button>
+                          </Button>
                         ) : state === "Inactive" ? (
-                          <button
-                            className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 disabled:opacity-60"
+                          <Button
                             disabled={busy}
                             onClick={() =>
                               void runAction(account, () =>
                                 setAdminAccountActive(account.userId, true),
                               )
                             }
-                            type="button"
+                            size="sm"
+                            variant="secondary"
                           >
                             Activate
-                          </button>
+                          </Button>
                         ) : null}
                       </div>
                     </td>
                   </tr>
                 );
-              })
-            ) : (
-              <tr>
-                <td className="px-4 py-8 text-center text-slate-500" colSpan={5}>
-                  No accounts match this filter.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              })}
+            </tbody>
+          </table>
+        </TableContainer>
+      ) : (
+        <EmptyState
+          description="Try another account-state filter."
+          title="No accounts match this filter."
+        />
+      )}
     </div>
   );
 }
