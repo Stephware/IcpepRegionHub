@@ -28,6 +28,9 @@ const pendingUser = {
 
 function createService() {
   const prisma = {
+    chapter: {
+      findUnique: jest.fn(),
+    },
     user: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -44,6 +47,56 @@ function createService() {
 }
 
 describe("UsersService account administration", () => {
+  it("blocks registration for an inactive chapter", async () => {
+    const { prisma, service } = createService();
+    prisma.chapter.findUnique.mockResolvedValue({
+      chapterId: 1n,
+      status: "Inactive",
+    });
+
+    await expect(
+      service.createChapterOfficer({
+        chapterId: 1n,
+        firstName: "Juan",
+        lastName: "Dela Cruz",
+        email: "juan@example.com",
+        passwordHash: "hash",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("creates pending chapter-officer accounts only for active chapters", async () => {
+    const { prisma, service } = createService();
+    prisma.chapter.findUnique.mockResolvedValue({
+      chapterId: 1n,
+      status: "Active",
+    });
+    prisma.user.create.mockResolvedValue(pendingUser);
+
+    const result = await service.createChapterOfficer({
+      chapterId: 1n,
+      firstName: " Juan ",
+      lastName: " Dela Cruz ",
+      email: " JUAN@EXAMPLE.COM ",
+      passwordHash: "hash",
+    });
+
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        chapterId: 1n,
+        firstName: "Juan",
+        lastName: "Dela Cruz",
+        email: "juan@example.com",
+        role: UserRole.ChapterOfficer,
+        isApproved: false,
+        isActive: true,
+      }),
+    });
+    expect(result.userId).toBe(10n);
+  });
+
   it("does not expose password hashes when listing users", async () => {
     const { prisma, service } = createService();
     prisma.user.findMany.mockResolvedValue([pendingUser]);
