@@ -14,6 +14,12 @@ type CreateChapterOfficerInput = {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  findById(userId: bigint) {
+    return this.prisma.user.findUnique({
+      where: { userId },
+    });
+  }
+
   findByEmail(email: string) {
     return this.prisma.user.findFirst({
       where: {
