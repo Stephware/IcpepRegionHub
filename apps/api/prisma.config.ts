@@ -10,4 +10,7 @@ export default defineConfig({
   datasource: {
     url: databaseUrl,
   },
+  migrations: {
+    seed: "node --loader ts-node/esm prisma/seed.ts",
+  },
 });

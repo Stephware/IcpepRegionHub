@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { listPublicChapters } from "./api";
-import { chapterDisplayName } from "./display";
+import { chapterOptionLabel } from "./display";
 import type { Chapter } from "./types";
 
 type ChapterSelectProps = {
@@ -64,13 +64,11 @@ export function ChapterSelect({
         </option>
         {chapters.map((chapter) => (
           <option key={chapter.chapterId} value={chapter.chapterId}>
-            {chapterDisplayName(chapter)} — {chapter.schoolName}
+            {chapterOptionLabel(chapter)}
           </option>
         ))}
       </select>
-      {error ? (
-        <p className="mt-2 text-xs text-red-700">{error}</p>
-      ) : null}
+      {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
       {!loading && !error && !chapters.length ? (
         <p className="mt-2 text-xs text-amber-700">
           No active chapters are available for registration yet.

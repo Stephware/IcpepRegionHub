@@ -53,6 +53,7 @@ describe("ChaptersService", () => {
 
     expect(prisma.chapter.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
+        orderBy: [{ schoolName: "asc" }, { chapterName: "asc" }],
         where: { status: "Active" },
       }),
     );

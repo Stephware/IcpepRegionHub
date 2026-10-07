@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { chapterDisplayName } from "../features/chapters/display";
+import {
+  chapterDisplayName,
+  chapterOptionLabel,
+} from "../features/chapters/display";
 
 describe("chapter display", () => {
   it("includes the acronym when one is available", () => {
@@ -18,5 +21,25 @@ describe("chapter display", () => {
         acronym: null,
       }),
     ).toBe("ICpEP.se Sample Chapter");
+  });
+
+  it("does not repeat the school name for seeded registration options", () => {
+    expect(
+      chapterOptionLabel({
+        schoolName: "Angeles University Foundation",
+        chapterName: "Angeles University Foundation",
+        acronym: null,
+      }),
+    ).toBe("Angeles University Foundation");
+  });
+
+  it("keeps chapter context when registration option names differ", () => {
+    expect(
+      chapterOptionLabel({
+        schoolName: "Sample University",
+        chapterName: "ICpEP.se Sample Chapter",
+        acronym: "SAMPLE",
+      }),
+    ).toBe("ICpEP.se Sample Chapter (SAMPLE) — Sample University");
   });
 });

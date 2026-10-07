@@ -18,9 +18,11 @@ The current V1 intentionally does **not** include Event Attendance or Forms & Fi
 ## Roles
 
 ### Public visitor
+
 Public visitors can access public announcements, published events, and the public chapter directory.
 
 ### ChapterOfficer
+
 Chapter officers can:
 
 - Sign in after regional approval
@@ -31,6 +33,7 @@ Chapter officers can:
 - View member-facing announcements and events
 
 ### RegionalOfficer
+
 Regional officers can:
 
 - Use the regional dashboard
@@ -41,6 +44,7 @@ Regional officers can:
 - Move requests through the regional support workflow
 
 ### RegionalAdmin
+
 Regional admins have Regional Officer capabilities plus the Admin Portal for:
 
 - Account approvals and role management
@@ -138,6 +142,16 @@ To override it, set:
 ```env
 NEXT_PUBLIC_API_BASE_URL="http://localhost:3001/api"
 ```
+
+## Database Seeding
+
+Chapter records are the single source of truth for official ICpEP Student Edition Region 3 school choices. After configuring `apps/api/.env`, seed the active affiliated schools with:
+
+```bash
+npm run db:seed
+```
+
+The seed is idempotent and safe to rerun. It creates or normalizes the 26 official affiliated school records, keeps them active, preserves existing optional chapter details, and does not delete or merge existing related records.
 
 ## Development Commands
 
