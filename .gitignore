@@ -40,3 +40,9 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local assistant/tool metadata
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
