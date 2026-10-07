@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { listAdminAnnouncements } from "@/features/announcements/api";
-import { listRegionalAssistanceRequests } from "@/features/assistance/api";
-import { listAdminChapters } from "@/features/chapters/api";
-import { listAdminEvents } from "@/features/events/api";
-import { listAdminAccounts } from "./accounts/api";
-import { listAdminCollaborationPosts } from "./collaborations/api";
-import { accountState } from "./accounts/helpers";
+import { apiFetch } from "@/lib/api/client";
 
 type Metrics = {
   pendingAccounts: number;
@@ -28,52 +22,12 @@ export function AdminOverview() {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([
-      listAdminAccounts(),
-      listAdminChapters(),
-      listAdminAnnouncements(),
-      listAdminEvents(),
-      listRegionalAssistanceRequests(),
-      listAdminCollaborationPosts(),
-    ])
-      .then(
-        ([
-          accounts,
-          chapters,
-          announcements,
-          events,
-          assistance,
-          collaborations,
-        ]) => {
-          if (cancelled) {
-            return;
-          }
-
-          setMetrics({
-            pendingAccounts: accounts.filter(
-              (account) => accountState(account) === "Pending",
-            ).length,
-            activeUsers: accounts.filter(
-              (account) => accountState(account) === "Active",
-            ).length,
-            activeChapters: chapters.filter(
-              (chapter) => chapter.status === "Active",
-            ).length,
-            draftAnnouncements: announcements.filter(
-              (announcement) => !announcement.isPublished,
-            ).length,
-            draftEvents: events.filter((event) => !event.isPublished).length,
-            openAssistance: assistance.filter(
-              (request) =>
-                request.status !== "Resolved" &&
-                request.status !== "Closed",
-            ).length,
-            openCollaborations: collaborations.filter(
-              (post) => post.status === "Open",
-            ).length,
-          });
-        },
-      )
+    apiFetch<Metrics>("/admin/overview")
+      .then((overview) => {
+        if (!cancelled) {
+          setMetrics(overview);
+        }
+      })
       .catch((requestError) => {
         if (!cancelled) {
           setError(

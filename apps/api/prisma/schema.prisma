@@ -28,6 +28,7 @@ model Chapter {
   collaborationPosts     CollaborationPost[]
   collaborationResponses CollaborationResponse[]
 
+  @@index([status, schoolName], map: "ix_chapters_status_school")
   @@map("chapters")
 }
 
@@ -56,6 +57,8 @@ model User {
 
   @@index([chapterId], map: "ix_users_chapter")
   @@index([role], map: "ix_users_role")
+  @@index([email], map: "ix_users_email")
+  @@index([isApproved, isActive], map: "ix_users_approval_active")
   @@map("users")
 }
 
@@ -102,6 +105,7 @@ model Announcement {
   @@index([category], map: "ix_announcements_category")
   @@index([isPublished], map: "ix_announcements_is_published")
   @@index([isPinned], map: "ix_announcements_is_pinned")
+  @@index([isPublished, visibility, publishedAt], map: "ix_announcements_publish_visibility_date")
   @@map("announcements")
 }
 
@@ -130,6 +134,7 @@ model Event {
   @@index([status], map: "ix_events_status")
   @@index([organizerChapterId], map: "ix_events_organizer_chapter")
   @@index([isPublished], map: "ix_events_is_published")
+  @@index([isPublished, startDateTime], map: "ix_events_publish_start")
   @@map("events")
 }
 
@@ -157,6 +162,8 @@ model AssistanceRequest {
   @@index([status], map: "ix_assistance_requests_status")
   @@index([submittedAt], map: "ix_assistance_requests_submitted_at")
   @@index([assignedToUserId], map: "ix_assistance_requests_assigned_user")
+  @@index([chapterId, submittedAt], map: "ix_assistance_requests_chapter_submitted")
+  @@index([status, priority, submittedAt], map: "ix_assistance_requests_status_priority_submitted")
   @@map("assistance_requests")
 }
 
@@ -204,6 +211,7 @@ model CollaborationPost {
   @@index([status], map: "ix_collaboration_posts_status")
   @@index([createdAt], map: "ix_collaboration_posts_created_at")
   @@index([collaborationType], map: "ix_collaboration_posts_type")
+  @@index([status, createdAt], map: "ix_collaboration_posts_status_created")
   @@map("collaboration_posts")
 }
 

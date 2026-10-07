@@ -1,8 +1,8 @@
 import type { MemberAnnouncement } from "@/features/announcements/types";
 import type { AssistanceRequestSummary } from "@/features/assistance/types";
-import type { Chapter, AdminChapter } from "@/features/chapters/types";
+import type { Chapter } from "@/features/chapters/types";
 import type { CollaborationPost } from "@/features/collaborations/types";
-import type { AdminEvent, EventItem } from "@/features/events/types";
+import type { EventItem } from "@/features/events/types";
 
 export type PendingAccount = {
   userId: string;
@@ -32,9 +32,9 @@ export type RegionalOfficerDashboardData = DashboardCommonData & {
 
 export type RegionalAdminDashboardData = DashboardCommonData & {
   assistanceRequests: AssistanceRequestSummary[];
-  chapters: AdminChapter[];
-  adminAnnouncements: MemberAnnouncement[];
-  adminEvents: AdminEvent[];
+  activeChapters: number;
+  draftAnnouncements: number;
+  draftEvents: number;
   pendingAccounts: PendingAccount[];
 };
 

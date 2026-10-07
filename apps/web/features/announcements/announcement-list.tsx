@@ -94,6 +94,8 @@ export function AnnouncementList() {
               <img
                 alt=""
                 className="h-48 w-full object-cover md:h-full"
+                decoding="async"
+                loading="lazy"
                 src={announcement.coverImageUrl}
               />
             ) : (

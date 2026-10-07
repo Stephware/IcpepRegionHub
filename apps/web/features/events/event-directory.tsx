@@ -255,6 +255,8 @@ function EventCard({ event }: { event: EventItem }) {
           <img
             alt=""
             className="h-44 w-full object-cover"
+            decoding="async"
+            loading="lazy"
             src={event.coverImageUrl}
           />
         ) : (

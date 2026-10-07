@@ -26,7 +26,7 @@ export function LoadingState({ label = "Loading..." }: { label?: string }) {
     <Card className="p-8 text-center">
       <div
         aria-hidden="true"
-        className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700"
+        className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-blue-700"
       />
       <p className="mt-3 text-sm text-slate-600">{label}</p>
     </Card>

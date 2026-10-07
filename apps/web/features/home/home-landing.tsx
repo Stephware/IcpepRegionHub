@@ -23,16 +23,24 @@ export function HomeLanding() {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([
+    Promise.allSettled([
       listPublicAnnouncements(),
       listPublicEvents(),
       listPublicChapters(),
     ])
-      .then(([announcementItems, eventItems, chapterItems]) => {
-        if (!cancelled) {
-          setAnnouncements(announcementItems);
-          setEvents(eventItems);
-          setChapters(chapterItems);
+      .then(([announcementResult, eventResult, chapterResult]) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (announcementResult.status === "fulfilled") {
+          setAnnouncements(announcementResult.value);
+        }
+        if (eventResult.status === "fulfilled") {
+          setEvents(eventResult.value);
+        }
+        if (chapterResult.status === "fulfilled") {
+          setChapters(chapterResult.value);
         }
       })
       .finally(() => {

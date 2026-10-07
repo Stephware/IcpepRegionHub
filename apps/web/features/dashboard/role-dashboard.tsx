@@ -31,7 +31,7 @@ export function RoleDashboard() {
 
     let cancelled = false;
 
-    loadDashboard(user)
+    loadDashboard()
       .then((data) => {
         if (!cancelled) {
           setDashboard(data);
@@ -227,14 +227,9 @@ function RegionalAdminDashboard({
   const collaborations = recentCollaborations(data.collaborations);
   const openRequests = openAssistanceCount(data.assistanceRequests);
   const urgent = urgentAssistanceCount(data.assistanceRequests);
-  const activeChapters = data.chapters.filter(
-    (chapter) => chapter.status === "Active",
-  ).length;
-  const draftAnnouncements = data.adminAnnouncements.filter(
-    (announcement) =>
-      "isPublished" in announcement && announcement.isPublished === false,
-  ).length;
-  const draftEvents = data.adminEvents.filter((event) => !event.isPublished).length;
+  const activeChapters = data.activeChapters;
+  const draftAnnouncements = data.draftAnnouncements;
+  const draftEvents = data.draftEvents;
 
   return (
     <div className="mt-8 space-y-8">
