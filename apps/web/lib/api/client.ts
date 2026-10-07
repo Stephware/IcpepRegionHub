@@ -103,9 +103,7 @@ export async function apiFetch<T>(
     }
 
     const generation = cacheGeneration;
-    let request: Promise<T>;
-
-    request = performFetch<T>(url, init)
+    const request: Promise<T> = performFetch<T>(url, init)
       .then((value) => {
         if (generation === cacheGeneration) {
           responseCache.set(url, {
