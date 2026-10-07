@@ -167,13 +167,13 @@ export function AdminOverview() {
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {modules.map((module) => (
             <Link
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal-300 hover:shadow"
+              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow"
               href={module.href}
               key={module.href}
             >
               <div className="flex items-start justify-between gap-4">
                 <h3 className="font-semibold text-slate-950">{module.title}</h3>
-                <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700">
+                <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                   {module.value} {module.label}
                 </span>
               </div>

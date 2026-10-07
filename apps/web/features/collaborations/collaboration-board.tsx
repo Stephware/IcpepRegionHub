@@ -293,7 +293,7 @@ export function CollaborationBoard() {
           <label className="text-sm font-medium text-slate-800">
             Collaboration type
             <select
-              className="mt-2 min-w-56 rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+              className="mt-2 min-w-56 rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
               onChange={(event) => setTypeFilter(event.target.value)}
               value={typeFilter}
             >
@@ -311,12 +311,12 @@ export function CollaborationBoard() {
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {visiblePosts.map((post) => (
               <Link
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal-300 hover:shadow"
+                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow"
                 href={`/collaborations/${post.collaborationPostId}`}
                 key={post.collaborationPostId}
               >
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700">
+                  <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                     {post.collaborationType}
                   </span>
                   <span
@@ -375,7 +375,7 @@ export function CollaborationBoard() {
                 </p>
               </div>
               <button
-                className="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white"
+                className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white"
                 onClick={startCreate}
                 type="button"
               >
@@ -389,7 +389,7 @@ export function CollaborationBoard() {
                   <article
                     className={`rounded-xl border bg-white p-4 shadow-sm ${
                       selected?.collaborationPostId === post.collaborationPostId
-                        ? "border-teal-300"
+                        ? "border-blue-300"
                         : "border-slate-200"
                     }`}
                     key={post.collaborationPostId}
@@ -404,7 +404,7 @@ export function CollaborationBoard() {
                           >
                             {post.status}
                           </span>
-                          <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                             {post.collaborationType}
                           </span>
                         </div>
@@ -419,7 +419,7 @@ export function CollaborationBoard() {
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link
-                        className="rounded-lg border border-teal-300 px-3 py-2 text-xs font-medium text-teal-700"
+                        className="rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-700"
                         href={`/collaborations/manage/${post.collaborationPostId}`}
                       >
                         Manage responses
@@ -491,7 +491,7 @@ export function CollaborationBoard() {
               <label className="text-sm font-medium text-slate-800 sm:col-span-2">
                 Description
                 <textarea
-                  className="mt-2 min-h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+                  className="mt-2 min-h-40 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
                   onChange={(event) =>
                     updateField("description", event.target.value)
                   }
@@ -541,7 +541,7 @@ export function CollaborationBoard() {
 
               <div className="flex gap-2 sm:col-span-2">
                 <button
-                  className="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                  className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
                   disabled={saving}
                   type="submit"
                 >
@@ -590,7 +590,7 @@ function Field({
     <label className="text-sm font-medium text-slate-800">
       {label}
       <input
-        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}

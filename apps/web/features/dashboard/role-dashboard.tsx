@@ -128,7 +128,7 @@ function ChapterOfficerDashboard({
 
       {data.chapter ? (
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
+          <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
             Your chapter
           </p>
           <h2 className="mt-2 text-xl font-semibold text-slate-950">
@@ -138,7 +138,7 @@ function ChapterOfficerDashboard({
           <p className="mt-2 text-sm text-slate-600">{data.chapter.schoolName}</p>
           <div className="mt-4">
             <Link
-              className="text-sm font-medium text-teal-700 hover:underline"
+              className="text-sm font-medium text-blue-700 hover:underline"
               href={`/chapters/${data.chapter.chapterId}`}
             >
               View chapter profile →
@@ -309,7 +309,7 @@ function StatusCard({
 }) {
   return (
     <Link
-      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal-300"
+      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300"
       href={href}
     >
       <p className="text-sm text-slate-500">{label}</p>
@@ -329,7 +329,7 @@ function QuickActions({
       <div className="mt-4 flex flex-wrap gap-3">
         {actions.map((action) => (
           <Link
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-700"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:text-blue-700"
             href={action.href}
             key={action.href}
           >
@@ -354,7 +354,7 @@ function Panel({
     <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-        <Link className="text-sm font-medium text-teal-700" href={href}>
+        <Link className="text-sm font-medium text-blue-700" href={href}>
           View all
         </Link>
       </div>

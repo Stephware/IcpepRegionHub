@@ -85,7 +85,7 @@ export function AnnouncementList() {
     <div className="mt-8 space-y-5">
       {items.map((announcement) => (
         <Link
-          className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-teal-300 hover:shadow"
+          className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-300 hover:shadow"
           href={`/announcements/${announcement.announcementId}`}
           key={announcement.announcementId}
         >
@@ -97,7 +97,7 @@ export function AnnouncementList() {
                 src={announcement.coverImageUrl}
               />
             ) : (
-              <div className="flex min-h-36 items-center justify-center bg-teal-50 px-6 text-center text-sm font-semibold text-teal-700">
+              <div className="flex min-h-36 items-center justify-center bg-blue-50 px-6 text-center text-sm font-semibold text-blue-700">
                 ICpEP Region 3
               </div>
             )}
@@ -114,7 +114,7 @@ export function AnnouncementList() {
                     Members only
                   </span>
                 ) : null}
-                <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700">
+                <span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                   {announcement.category}
                 </span>
               </div>

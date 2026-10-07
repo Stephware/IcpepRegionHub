@@ -35,7 +35,7 @@ export function AdminSidebar() {
             <Link
               className={`whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 active
-                  ? "bg-teal-50 text-teal-800"
+                  ? "bg-blue-50 text-blue-800"
                   : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
               }`}
               href={item.href}

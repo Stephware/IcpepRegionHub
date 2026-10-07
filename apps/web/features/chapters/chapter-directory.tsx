@@ -127,7 +127,7 @@ export function ChapterDirectory() {
                 href={`/chapters/${chapter.chapterId}`}
                 key={chapter.chapterId}
               >
-                <Card className="h-full p-5 transition hover:border-teal-300 hover:shadow">
+                <Card className="h-full p-5 transition hover:border-blue-300 hover:shadow">
                   <div className="flex gap-4">
                     {chapter.logoUrl ? (
                       <img
@@ -136,7 +136,7 @@ export function ChapterDirectory() {
                         src={chapter.logoUrl}
                       />
                     ) : (
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-lg font-semibold text-teal-700">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-lg font-semibold text-blue-700">
                         {chapter.acronym?.slice(0, 3) ?? "IC"}
                       </div>
                     )}

@@ -1,21 +1,43 @@
+import { LandingHero } from "@/components/landing/landing-hero";
 import { ProtectedRoute } from "@/features/auth/protected-route";
 import { AssistanceDashboard } from "@/features/assistance/assistance-dashboard";
 
 export default function AssistancePage() {
   return (
     <ProtectedRoute allowedRoles={["ChapterOfficer"]}>
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-          ICpEP Region 3 Hub
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-          Request Assistance
-        </h1>
-        <p className="mt-3 max-w-2xl text-slate-600">
-          Submit chapter concerns to the regional team and monitor
-          existing assistance tickets for your chapter.
-        </p>
-        <AssistanceDashboard />
+      <main>
+        <LandingHero
+          compact
+          description="Submit chapter concerns to the regional team, monitor progress, and keep every support request organized from submission to resolution."
+          eyebrow="Chapter Support"
+          title="Request Assistance"
+          visualCaption="Regional support"
+          visualLabel="A clear path from concern to resolution."
+        />
+
+        <section className="border-b border-blue-100 bg-blue-50/60">
+          <div className="mx-auto max-w-7xl px-6 py-8">
+            <div className="grid gap-3 sm:grid-cols-4">
+              {["Submit", "Under Review", "In Progress", "Resolved"].map(
+                (step, index) => (
+                  <div
+                    className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm"
+                    key={step}
+                  >
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
+                      Step {index + 1}
+                    </p>
+                    <p className="mt-2 font-semibold text-slate-950">{step}</p>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-6 py-12">
+          <AssistanceDashboard />
+        </section>
       </main>
     </ProtectedRoute>
   );

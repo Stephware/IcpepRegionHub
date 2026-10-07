@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MainNav } from "@/components/navigation/main-nav";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { AuthProvider } from "@/features/auth/auth-context";
 import "./globals.css";
 
@@ -17,10 +18,11 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <header className="border-b border-slate-200 bg-white">
+          <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.03)] backdrop-blur">
             <MainNav />
           </header>
           {children}
+          <SiteFooter />
         </AuthProvider>
       </body>
     </html>

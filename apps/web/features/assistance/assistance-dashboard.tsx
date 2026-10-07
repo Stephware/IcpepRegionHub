@@ -107,7 +107,7 @@ export function AssistanceDashboard() {
           <label className="block text-sm font-medium text-slate-800">
             Category
             <select
-              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -127,7 +127,7 @@ export function AssistanceDashboard() {
           <label className="block text-sm font-medium text-slate-800">
             Subject
             <input
-              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
               maxLength={250}
               onChange={(event) =>
                 setForm((current) => ({
@@ -143,7 +143,7 @@ export function AssistanceDashboard() {
           <label className="block text-sm font-medium text-slate-800">
             Priority
             <select
-              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -163,7 +163,7 @@ export function AssistanceDashboard() {
           <label className="block text-sm font-medium text-slate-800">
             Description
             <textarea
-              className="mt-2 min-h-44 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+              className="mt-2 min-h-44 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -188,7 +188,7 @@ export function AssistanceDashboard() {
           ) : null}
 
           <button
-            className="w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            className="w-full rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
             disabled={submitting}
             type="submit"
           >
@@ -218,7 +218,7 @@ export function AssistanceDashboard() {
           <div className="mt-6 space-y-4">
             {requests.map((request) => (
               <Link
-                className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-teal-300 hover:shadow"
+                className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow"
                 href={`/assistance/${request.assistanceRequestId}`}
                 key={request.assistanceRequestId}
               >

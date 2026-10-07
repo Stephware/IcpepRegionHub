@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuth } from "@/features/auth/auth-context";
+import { BrandMark } from "@/components/brand/brand-mark";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth/auth-context";
 import { cn } from "@/lib/utils/cn";
 
 const publicItems = [
+  { href: "/", label: "Home" },
   { href: "/announcements", label: "Announcements" },
   { href: "/events", label: "Events" },
   { href: "/chapters", label: "Chapters" },
@@ -32,22 +34,18 @@ export function MainNav() {
         : pathname === href || pathname.startsWith(`${href}/`);
 
     return cn(
-      "rounded-md px-2 py-1.5 text-sm font-medium transition",
+      "relative whitespace-nowrap rounded-md px-2 py-2 text-sm font-medium transition",
       active
-        ? "bg-teal-50 text-teal-800"
-        : "text-slate-700 hover:bg-slate-50 hover:text-slate-950",
+        ? "text-blue-700 after:absolute after:inset-x-2 after:-bottom-3 after:h-0.5 after:rounded-full after:bg-blue-600"
+        : "text-slate-700 hover:text-blue-700",
     );
   }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          className="font-semibold tracking-tight text-slate-950"
-          href="/"
-          onClick={() => setOpen(false)}
-        >
-          ICpEP Region 3 Hub
+      <div className="flex min-h-12 items-center justify-between gap-4">
+        <Link href="/" onClick={() => setOpen(false)}>
+          <BrandMark />
         </Link>
 
         <Button
@@ -63,7 +61,7 @@ export function MainNav() {
 
         <nav
           aria-label="Primary navigation"
-          className="hidden items-center gap-1 md:flex"
+          className="hidden items-center gap-3 md:flex"
         >
           <NavItems
             loading={loading}
@@ -82,7 +80,14 @@ export function MainNav() {
         >
           <NavItems
             loading={loading}
-            navLinkClass={navLinkClass}
+            navLinkClass={(href) =>
+              cn(
+                "rounded-lg px-3 py-2.5 text-sm font-medium",
+                pathname === href || (href !== "/" && pathname.startsWith(`${href}/`))
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-slate-700 hover:bg-slate-50",
+              )
+            }
             onNavigate={() => setOpen(false)}
             onSignOut={handleLogout}
             user={user}
@@ -122,11 +127,11 @@ function NavItems({
       {user ? (
         <>
           <Link
-            className={navLinkClass("/dashboard")}
-            href="/dashboard"
+            className={navLinkClass("/collaborations")}
+            href="/collaborations"
             onClick={onNavigate}
           >
-            Dashboard
+            Collaborations
           </Link>
 
           {user.role === "ChapterOfficer" ? (
@@ -140,11 +145,11 @@ function NavItems({
           ) : null}
 
           <Link
-            className={navLinkClass("/collaborations")}
-            href="/collaborations"
+            className={navLinkClass("/dashboard")}
+            href="/dashboard"
             onClick={onNavigate}
           >
-            Collaborations
+            Dashboard
           </Link>
 
           {user.role === "RegionalAdmin" ||
@@ -154,7 +159,7 @@ function NavItems({
               href="/regional/assistance"
               onClick={onNavigate}
             >
-              Regional Assistance
+              Regional
             </Link>
           ) : null}
 
@@ -168,12 +173,8 @@ function NavItems({
             </Link>
           ) : null}
 
-          <span className="px-2 py-1.5 text-sm text-slate-500">
-            {user.firstName} {user.lastName}
-          </span>
-
           <button
-            className="rounded-md px-2 py-1.5 text-left text-sm font-medium text-teal-700 transition hover:bg-teal-50 hover:text-teal-900"
+            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
             onClick={() => void onSignOut()}
             type="button"
           >
@@ -183,18 +184,11 @@ function NavItems({
       ) : !loading ? (
         <>
           <Link
-            className={navLinkClass("/login")}
+            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
             href="/login"
             onClick={onNavigate}
           >
-            Sign in
-          </Link>
-          <Link
-            className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-teal-800"
-            href="/register"
-            onClick={onNavigate}
-          >
-            Register
+            Sign In
           </Link>
         </>
       ) : null}

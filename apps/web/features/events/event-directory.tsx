@@ -189,7 +189,7 @@ export function EventDirectory() {
                           className={`block truncate rounded px-2 py-1 text-xs font-medium ${
                             event.status === "Cancelled"
                               ? "bg-red-50 text-red-700 line-through"
-                              : "bg-teal-50 text-teal-700"
+                              : "bg-blue-50 text-blue-700"
                           }`}
                           href={`/events/${event.eventId}`}
                           key={event.eventId}
@@ -250,7 +250,7 @@ export function EventDirectory() {
 function EventCard({ event }: { event: EventItem }) {
   return (
     <Link href={`/events/${event.eventId}`}>
-      <Card className="h-full overflow-hidden transition hover:border-teal-300 hover:shadow">
+      <Card className="h-full overflow-hidden transition hover:border-blue-300 hover:shadow">
         {event.coverImageUrl ? (
           <img
             alt=""
@@ -258,7 +258,7 @@ function EventCard({ event }: { event: EventItem }) {
             src={event.coverImageUrl}
           />
         ) : (
-          <div className="flex h-32 items-center justify-center bg-teal-50 text-sm font-semibold text-teal-700">
+          <div className="flex h-32 items-center justify-center bg-blue-50 text-sm font-semibold text-blue-700">
             ICpEP Region 3 Event
           </div>
         )}
@@ -281,7 +281,7 @@ function EventCard({ event }: { event: EventItem }) {
           {event.venue ? (
             <p className="mt-2 text-sm text-slate-500">{event.venue}</p>
           ) : null}
-          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-teal-700">
+          <p className="mt-4 text-xs font-medium uppercase tracking-wide text-blue-700">
             {formatEventDay(event.startDateTime)}
           </p>
         </div>

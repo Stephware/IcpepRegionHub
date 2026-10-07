@@ -1,19 +1,20 @@
+import { LandingHero } from "@/components/landing/landing-hero";
 import { AnnouncementList } from "@/features/announcements/announcement-list";
 
 export default function AnnouncementsPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
-        ICpEP Region 3 Hub
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-        Announcements
-      </h1>
-      <p className="mt-3 max-w-2xl text-slate-600">
-        View official Region 3 updates, advisories, and important information.
-        Signed-in members can also see member-only announcements.
-      </p>
-      <AnnouncementList />
+    <main>
+      <LandingHero
+        compact
+        description="Official Region 3 updates, advisories, reminders, and important information for ICpEP.se chapters and members."
+        eyebrow="Region 3 Updates"
+        title="Regional Announcements"
+        visualCaption="Stay informed"
+        visualLabel="Official updates in one place."
+      />
+      <section className="mx-auto max-w-6xl px-6 py-12">
+        <AnnouncementList />
+      </section>
     </main>
   );
 }
