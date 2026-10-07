@@ -143,6 +143,18 @@ To override it, set:
 NEXT_PUBLIC_API_BASE_URL="http://localhost:3001/api"
 ```
 
+## Local Database Setup
+
+After starting PostgreSQL/Docker and configuring `apps/api/.env`, initialize or synchronize the local development schema and seed the official Region 3 chapters with:
+
+```bash
+npm run db:setup
+```
+
+This runs Prisma `db push` first, then the idempotent chapter seed. It is intended for local development and avoids requiring a destructive database reset.
+
+If the registration Chapter dropdown shows a database/internal-server error after Docker starts, run `npm run db:setup` once and restart `npm run dev`.
+
 ## Database Seeding
 
 Chapter records are the single source of truth for official ICpEP Student Edition Region 3 school choices. After configuring `apps/api/.env`, seed the active affiliated schools with:

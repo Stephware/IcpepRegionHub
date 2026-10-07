@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Select } from "@/components/ui/form-controls";
+import { ApiError } from "@/lib/api/client";
 import { listPublicChapters } from "./api";
 import { chapterOptionLabel } from "./display";
 import type { Chapter } from "./types";
@@ -27,16 +29,30 @@ export function ChapterSelect({
       .then((items) => {
         if (!cancelled) {
           setChapters(items);
+          setError("");
         }
       })
       .catch((requestError) => {
-        if (!cancelled) {
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Unable to load chapters.",
-          );
+        if (cancelled) {
+          return;
         }
+
+        if (
+          process.env.NODE_ENV === "development" &&
+          requestError instanceof ApiError &&
+          requestError.status >= 500
+        ) {
+          setError(
+            "Unable to load chapters from the database. Run npm run db:setup once, then restart npm run dev.",
+          );
+          return;
+        }
+
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Unable to load chapters.",
+        );
       })
       .finally(() => {
         if (!cancelled) {
@@ -51,8 +67,7 @@ export function ChapterSelect({
 
   return (
     <>
-      <select
-        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-teal-700"
+      <Select
         disabled={loading || Boolean(error)}
         id="chapterId"
         onChange={(event) => onChange(event.target.value)}
@@ -67,8 +82,10 @@ export function ChapterSelect({
             {chapterOptionLabel(chapter)}
           </option>
         ))}
-      </select>
+      </Select>
+
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
+
       {!loading && !error && !chapters.length ? (
         <p className="mt-2 text-xs text-amber-700">
           No active chapters are available for registration yet.

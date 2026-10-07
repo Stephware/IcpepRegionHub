@@ -13,6 +13,7 @@ import { UsersModule } from "./users/users.module.js";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ["apps/api/.env", ".env"],
     }),
     PrismaModule,
     AuthModule,

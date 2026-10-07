@@ -1,17 +1,26 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client.js";
-
-const databaseUrl =
-  process.env.DATABASE_URL ??
-  "postgresql://USERNAME:PASSWORD@localhost:5432/IcpepRegionHub?schema=public";
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  constructor() {
+  constructor(configService: ConfigService) {
+    const databaseUrl = configService.get<string>("DATABASE_URL");
+
+    if (
+      !databaseUrl ||
+      databaseUrl.includes("USERNAME:PASSWORD") ||
+      databaseUrl.includes("CHANGE_ME")
+    ) {
+      throw new Error(
+        "DATABASE_URL is not configured. Set it in apps/api/.env before starting the API.",
+      );
+    }
+
     super({
       adapter: new PrismaPg(databaseUrl),
     });
