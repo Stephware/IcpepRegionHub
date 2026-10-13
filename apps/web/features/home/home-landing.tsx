@@ -104,10 +104,10 @@ export function HomeLanding() {
         eyebrow="ICpEP.se Region 3 Hub"
         title="One Region. Stronger Together."
         visualCaption="Students · Chapters · Communities"
-        visualLabel="A stronger Region 3."
+        visualLabel={"Students.\nChapters.\nCommunities.\nA Stronger Region 3."}
       />
 
-      <section className="relative z-10 -mt-10 pb-12">
+      <section className="relative z-10 -mt-20 pb-12 sm:-mt-24">
         <div className="mx-auto grid max-w-7xl gap-4 px-6 lg:grid-cols-3">
           <PreviewPanel
             href="/announcements"

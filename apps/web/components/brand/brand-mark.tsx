@@ -1,27 +1,42 @@
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { cn } from "@/lib/utils/cn";
 
 export function BrandMark({
   compact = false,
+  inverse = false,
   className,
 }: {
   compact?: boolean;
+  inverse?: boolean;
   className?: string;
 }) {
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border border-blue-200 bg-[radial-gradient(circle_at_35%_30%,#7dd3fc_0%,#2563eb_45%,#082f81_100%)] shadow-sm">
-        <div className="absolute inset-[5px] rounded-full border border-white/50" />
-        <span className="relative text-[10px] font-extrabold tracking-tight text-white">
-          R3
-        </span>
-      </div>
+      <BrandLogo
+        fallbackClassName={cn(
+          "h-12 w-12 border shadow-sm",
+          inverse ? "border-white/25" : "border-blue-200",
+        )}
+        priority
+      />
 
       {!compact ? (
-        <div className="hidden leading-tight sm:block">
-          <p className="text-[11px] font-extrabold uppercase tracking-tight text-slate-950 lg:text-xs">
+        <div className="hidden leading-[1.08] sm:block">
+          <p
+            className={cn(
+              "text-[11px] font-extrabold uppercase tracking-tight lg:text-xs",
+              inverse ? "text-white" : "text-[#07164c]",
+            )}
+          >
             Institute of Computer Engineers
+            <span className="block">of the Philippines</span>
           </p>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-700 lg:text-[11px]">
+          <p
+            className={cn(
+              "mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] lg:text-[11px]",
+              inverse ? "text-blue-100" : "text-blue-700",
+            )}
+          >
             Student Edition · Region 3
           </p>
         </div>
