@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
-const LOGO_SRC = "/assets/branding/icpep-region3-logo.svg";
+const LOGO_SRC = "/assets/branding/icpep-region3-logo.png";
 
 export function BrandLogo({
   className,

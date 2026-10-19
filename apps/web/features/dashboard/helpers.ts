@@ -16,6 +16,12 @@ export function recentAnnouncements(
     .slice(0, limit);
 }
 
+export function upcomingEventCount(events: EventItem[]) {
+  return events.filter(
+    (event) => event.status === "Upcoming" || event.status === "Ongoing",
+  ).length;
+}
+
 export function upcomingEvents(events: EventItem[], limit = 3) {
   return [...events]
     .filter(

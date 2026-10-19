@@ -4,6 +4,7 @@ import {
   openAssistanceCount,
   recentAnnouncements,
   recentCollaborations,
+  upcomingEventCount,
   upcomingEvents,
   urgentAssistanceCount,
 } from "../features/dashboard/helpers";
@@ -138,6 +139,7 @@ describe("dashboard helpers", () => {
     };
 
     expect(upcomingEvents([completed, baseEvent])).toHaveLength(1);
+    expect(upcomingEventCount([completed, baseEvent])).toBe(1);
   });
 
   it("keeps only open collaboration posts", () => {
