@@ -212,12 +212,31 @@ export class UsersService {
     };
   }
 
-  async changeRole(userId: bigint, role: UserRole) {
+  async changeRole(userId: bigint, role: UserRole, chapterId?: string) {
     await this.ensureUserExists(userId);
+
+    let linkedChapterId: bigint | null = null;
+    if (role === UserRole.ChapterOfficer) {
+      if (!chapterId || !/^[1-9]\d*$/.test(chapterId)) {
+        throw new BadRequestException(
+          "Chapter officers require a valid active chapter.",
+        );
+      }
+      linkedChapterId = BigInt(chapterId);
+      const chapter = await this.prisma.chapter.findUnique({
+        where: { chapterId: linkedChapterId },
+        select: { status: true },
+      });
+      if (!chapter || chapter.status !== "Active") {
+        throw new BadRequestException(
+          "Chapter officers require a valid active chapter.",
+        );
+      }
+    }
 
     const user = await this.prisma.user.update({
       where: { userId },
-      data: { role },
+      data: { role, chapterId: linkedChapterId },
       select: publicUserSelect,
     });
 

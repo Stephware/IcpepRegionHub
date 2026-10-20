@@ -4,8 +4,10 @@ import {
   openAssistanceCount,
   recentAnnouncements,
   recentCollaborations,
+  upcomingEventCount,
   upcomingEvents,
   urgentAssistanceCount,
+  unassignedAssistanceCount,
 } from "../features/dashboard/helpers";
 import type { MemberAnnouncement } from "../features/announcements/types";
 import type { AssistanceRequestSummary } from "../features/assistance/types";
@@ -138,6 +140,38 @@ describe("dashboard helpers", () => {
     };
 
     expect(upcomingEvents([completed, baseEvent])).toHaveLength(1);
+    expect(upcomingEventCount([completed, baseEvent])).toBe(1);
+  });
+
+  it("counts all upcoming and ongoing events while limiting the preview", () => {
+    const events: EventItem[] = Array.from({ length: 7 }, (_, index) => ({
+      ...baseEvent,
+      eventId: String(index + 1),
+      status: index === 6 ? "Ongoing" : "Upcoming",
+    }));
+    events.push({ ...baseEvent, eventId: "8", status: "Cancelled" });
+    events.push({ ...baseEvent, eventId: "9", status: "Completed" });
+
+    expect(upcomingEvents(events)).toHaveLength(3);
+    expect(upcomingEventCount(events)).toBe(7);
+    expect(events).toHaveLength(9);
+  });
+
+  it("counts only unassigned requests that still need regional action", () => {
+    const requests = [
+      request("Submitted", "Normal"),
+      request("Under Review", "Urgent"),
+      request("In Progress", "High"),
+      request("Resolved", "Urgent"),
+      request("Closed", "Urgent"),
+      request("Submitted", "Urgent", "20"),
+    ];
+
+    expect(unassignedAssistanceCount(requests)).toBe(3);
+    expect(openAssistanceCount(requests)).toBe(4);
+    expect(urgentAssistanceCount(requests)).toBe(2);
+    expect(assignedAssistanceCount(requests, "20")).toBe(1);
+    expect(assignedAssistanceCount(requests, "21")).toBe(0);
   });
 
   it("keeps only open collaboration posts", () => {

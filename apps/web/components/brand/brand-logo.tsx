@@ -24,9 +24,11 @@ export function BrandLogo({
         fallbackClassName,
       )}
     >
-      <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_30%,#7dd3fc_0%,#2563eb_45%,#082f81_100%)] text-[11px] font-black tracking-tight text-white">
-        R3
-      </span>
+      {failed ? (
+        <span className="absolute inset-0 grid place-items-center bg-[radial-gradient(circle_at_35%_30%,#7dd3fc_0%,#2563eb_45%,#082f81_100%)] text-[11px] font-black tracking-tight text-white">
+          R3
+        </span>
+      ) : null}
 
       {!failed ? (
         <img

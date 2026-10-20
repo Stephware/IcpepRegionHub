@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChapterSelect } from "@/features/chapters/chapter-select";
 import type { UserRole } from "@/features/auth/types";
 import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,11 @@ export function AccountAdminManager() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [roleEdit, setRoleEdit] = useState<{
+    userId: string;
+    role: UserRole;
+    chapterId: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +111,7 @@ export function AccountAdminManager() {
     try {
       const result = await action();
       setNotice(result.message);
+      setRoleEdit(null);
       await refresh();
     } catch (requestError) {
       setError(
@@ -127,7 +134,11 @@ export function AccountAdminManager() {
 
   return (
     <div className="mt-8 space-y-6">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Account filters">
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Account filters"
+      >
         {filters.map((item) => (
           <Button
             key={item}
@@ -139,6 +150,12 @@ export function AccountAdminManager() {
           </Button>
         ))}
       </div>
+
+      <p className="text-sm text-slate-600">
+        Role and access changes take effect on the next API request. The
+        affected user should refresh their page to update navigation and their
+        dashboard.
+      </p>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
       {notice ? <Alert tone="success">{notice}</Alert> : null}
@@ -161,31 +178,43 @@ export function AccountAdminManager() {
                 const busy = actionId === account.userId;
 
                 return (
-                  <tr className="align-top hover:bg-slate-50/70" key={account.userId}>
+                  <tr
+                    className="align-top hover:bg-slate-50/70"
+                    key={account.userId}
+                  >
                     <td className="px-4 py-4">
                       <p className="font-medium text-slate-950">
                         {account.firstName} {account.lastName}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">{account.email}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {account.email}
+                      </p>
                     </td>
                     <td className="px-4 py-4 text-slate-600">
                       {account.chapter
-                        ? account.chapter.acronym ?? account.chapter.chapterName
+                        ? (account.chapter.acronym ??
+                          account.chapter.chapterName)
                         : "Regional"}
                     </td>
                     <td className="px-4 py-4">
                       <Select
                         className="mt-0 min-w-44 py-2"
-                        disabled={busy || state === "Pending" || state === "Rejected"}
-                        onChange={(event) =>
-                          void runAction(account, () =>
-                            changeAdminAccountRole(
-                              account.userId,
-                              event.target.value as UserRole,
-                            ),
-                          )
+                        disabled={
+                          busy || state === "Pending" || state === "Rejected"
                         }
-                        value={account.role}
+                        aria-label={`Role for ${account.firstName} ${account.lastName}`}
+                        onChange={(event) =>
+                          setRoleEdit({
+                            userId: account.userId,
+                            role: event.target.value as UserRole,
+                            chapterId: account.chapterId ?? "",
+                          })
+                        }
+                        value={
+                          roleEdit?.userId === account.userId
+                            ? roleEdit.role
+                            : account.role
+                        }
                       >
                         {roles.map((role) => (
                           <option key={role} value={role}>
@@ -193,6 +222,54 @@ export function AccountAdminManager() {
                           </option>
                         ))}
                       </Select>
+                      {roleEdit?.userId === account.userId ? (
+                        <div className="mt-3 space-y-3">
+                          {roleEdit.role === "ChapterOfficer" ? (
+                            <label
+                              className="block text-xs font-medium text-slate-600"
+                              htmlFor="chapterId"
+                            >
+                              Active chapter
+                              <ChapterSelect
+                                onChange={(chapterId) =>
+                                  setRoleEdit({ ...roleEdit, chapterId })
+                                }
+                                required
+                                value={roleEdit.chapterId}
+                              />
+                            </label>
+                          ) : null}
+                          <div className="flex gap-2">
+                            <Button
+                              disabled={
+                                busy ||
+                                (roleEdit.role === "ChapterOfficer" &&
+                                  !roleEdit.chapterId)
+                              }
+                              onClick={() =>
+                                void runAction(account, () =>
+                                  changeAdminAccountRole(
+                                    account.userId,
+                                    roleEdit.role,
+                                    roleEdit.chapterId,
+                                  ),
+                                )
+                              }
+                              size="sm"
+                            >
+                              Save role
+                            </Button>
+                            <Button
+                              disabled={busy}
+                              onClick={() => setRoleEdit(null)}
+                              size="sm"
+                              variant="secondary"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-4">
                       <Badge variant={stateVariant(state)}>{state}</Badge>

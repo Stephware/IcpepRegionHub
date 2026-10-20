@@ -1,7 +1,11 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { OfficerPhoto } from "../features/chapters/officer-photo";
 import { describe, expect, it } from "vitest";
 import {
   chapterDisplayName,
   chapterOptionLabel,
+  officerInitials,
 } from "../features/chapters/display";
 
 describe("chapter display", () => {
@@ -41,5 +45,40 @@ describe("chapter display", () => {
         acronym: "SAMPLE",
       }),
     ).toBe("ICpEP.se Sample Chapter (SAMPLE) — Sample University");
+  });
+});
+
+describe("officer initials", () => {
+  it.each([
+    [" Juan Dela Cruz ", "JC"],
+    ["Maria", "M"],
+    ["", "IC"],
+    ["  Ana   Reyes ", "AR"],
+  ])("uses a clean placeholder for %s", (name, expected) => {
+    expect(officerInitials(name)).toBe(expected);
+  });
+});
+
+describe("officer photo", () => {
+  it("renders configured photos with an accessible name", () => {
+    const html = renderToStaticMarkup(
+      createElement(OfficerPhoto, {
+        fullName: "Juan Dela Cruz",
+        photoUrl: "/assets/people/juan.jpg",
+      }),
+    );
+    expect(html).toContain('src="/assets/people/juan.jpg"');
+    expect(html).toContain('alt="Juan Dela Cruz"');
+  });
+
+  it("renders initials without inventing a photo", () => {
+    const html = renderToStaticMarkup(
+      createElement(OfficerPhoto, {
+        fullName: "Juan Dela Cruz",
+        photoUrl: null,
+      }),
+    );
+    expect(html).toContain("JC");
+    expect(html).not.toContain("<img");
   });
 });

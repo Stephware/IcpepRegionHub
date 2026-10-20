@@ -35,6 +35,7 @@ const request = {
 
 function createService() {
   const prisma = {
+    $transaction: jest.fn(),
     assistanceRequest: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -48,6 +49,7 @@ function createService() {
       findUnique: jest.fn(),
     },
   };
+  prisma.$transaction.mockImplementation(async (action) => action(prisma));
 
   return {
     prisma,
@@ -183,5 +185,45 @@ describe("AssistanceRequestsService regional management", () => {
         2n,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it.each(["2", null])("assigns and unassigns an eligible regional officer (%s)", async (userId) => {
+    const { prisma, service } = createService();
+    prisma.assistanceRequest.findUnique.mockResolvedValue(request);
+    prisma.user.findUnique.mockResolvedValue({ userId: 2n, role: UserRole.RegionalOfficer, isApproved: true, isActive: true });
+    prisma.assistanceRequest.update.mockResolvedValue(request);
+    await service.assignRequest(40n, { userId });
+    expect(prisma.assistanceRequest.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ assignedToUserId: userId === null ? null : 2n }),
+    }));
+  });
+
+  it("changes priority without changing status", async () => {
+    const { prisma, service } = createService();
+    prisma.assistanceRequest.findUnique.mockResolvedValue(request);
+    prisma.assistanceRequest.update.mockResolvedValue({ ...request, priority: "Urgent" });
+    const result = await service.updatePriority(40n, { priority: "Urgent" });
+    expect(result.request).toMatchObject({ priority: "Urgent", status: "Submitted" });
+  });
+
+  it.each([
+    ["Submitted", "Under Review"],
+    ["Under Review", "In Progress"],
+    ["In Progress", "Resolved"],
+    ["Resolved", "Closed"],
+  ] as const)("moves %s to %s with a public history update", async (previous, status) => {
+    const { prisma, service } = createService();
+    prisma.assistanceRequest.findUnique.mockResolvedValueOnce({ ...request, status: previous });
+    prisma.assistanceRequest.findUnique.mockImplementation(async () => ({
+      ...request, ...prisma.assistanceRequest.update.mock.calls[0][0].data, updates: [],
+    }));
+    const result = await service.updateStatus(40n, { status }, 2n);
+    expect(result.request.status).toBe(status);
+    expect(prisma.assistanceRequestUpdate.create).toHaveBeenCalledWith({ data: expect.objectContaining({
+      assistanceRequestId: 40n, userId: 2n, newStatus: status, isInternalNote: false,
+    }) });
+    if (status === "Resolved") {
+      expect(result.request.resolvedAt).toBeInstanceOf(Date);
+    }
   });
 });

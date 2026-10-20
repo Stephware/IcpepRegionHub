@@ -47,19 +47,17 @@ export class AccountAdminController {
   }
 
   @Patch(":id/active")
-  setActive(
-    @Param("id") id: string,
-    @Body() input: UpdateUserActiveDto,
-  ) {
+  setActive(@Param("id") id: string, @Body() input: UpdateUserActiveDto) {
     return this.usersService.setActive(this.parseUserId(id), input.isActive);
   }
 
   @Patch(":id/role")
-  changeRole(
-    @Param("id") id: string,
-    @Body() input: UpdateUserRoleDto,
-  ) {
-    return this.usersService.changeRole(this.parseUserId(id), input.role);
+  changeRole(@Param("id") id: string, @Body() input: UpdateUserRoleDto) {
+    return this.usersService.changeRole(
+      this.parseUserId(id),
+      input.role,
+      input.chapterId,
+    );
   }
 
   private parseUserId(id: string) {

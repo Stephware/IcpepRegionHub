@@ -33,6 +33,7 @@ type OfficerRecord = {
   position: string;
   email: string | null;
   contactNumber: string | null;
+  photoUrl: string | null;
   academicYear: string;
   isCurrent: boolean;
   createdAt: Date;
@@ -149,7 +150,10 @@ export class ChaptersService {
               ? [
                   {
                     schoolName: {
-                      equals: this.requiredText(input.schoolName, "School name"),
+                      equals: this.requiredText(
+                        input.schoolName,
+                        "School name",
+                      ),
                       mode: "insensitive" as const,
                     },
                   },
@@ -207,10 +211,7 @@ export class ChaptersService {
     };
   }
 
-  async updateChapterStatus(
-    chapterId: bigint,
-    status: "Active" | "Inactive",
-  ) {
+  async updateChapterStatus(chapterId: bigint, status: "Active" | "Inactive") {
     await this.ensureChapterExists(chapterId);
 
     const chapter = await this.prisma.chapter.update({
@@ -259,10 +260,7 @@ export class ChaptersService {
     return officers.map((officer) => this.toAdminOfficer(officer));
   }
 
-  async createOfficer(
-    chapterId: bigint,
-    input: CreateChapterOfficerDto,
-  ) {
+  async createOfficer(chapterId: bigint, input: CreateChapterOfficerDto) {
     await this.ensureChapterExists(chapterId);
 
     const userId = this.parseOptionalId(input.userId, "User");
@@ -279,6 +277,7 @@ export class ChaptersService {
         position: this.requiredText(input.position, "Position"),
         email: this.optionalText(input.email),
         contactNumber: this.optionalText(input.contactNumber),
+        photoUrl: this.officerPhoto(input.photoUrl),
         academicYear: this.requiredText(input.academicYear, "Academic year"),
         isCurrent: true,
       },
@@ -320,6 +319,7 @@ export class ChaptersService {
             : this.requiredText(input.position, "Position"),
         email: this.optionalText(input.email),
         contactNumber: this.optionalText(input.contactNumber),
+        photoUrl: this.officerPhoto(input.photoUrl),
         academicYear:
           input.academicYear === undefined
             ? undefined
@@ -387,10 +387,7 @@ export class ChaptersService {
     }
   }
 
-  private async ensureUserBelongsToChapter(
-    userId: bigint,
-    chapterId: bigint,
-  ) {
+  private async ensureUserBelongsToChapter(userId: bigint, chapterId: bigint) {
     const user = await this.prisma.user.findUnique({
       where: { userId },
       select: {
@@ -416,17 +413,13 @@ export class ChaptersService {
     }
 
     if (!/^\d+$/.test(value)) {
-      throw new BadRequestException(
-        `${label} ID must be a positive integer.`,
-      );
+      throw new BadRequestException(`${label} ID must be a positive integer.`);
     }
 
     const parsed = BigInt(value);
 
     if (parsed <= 0n) {
-      throw new BadRequestException(
-        `${label} ID must be a positive integer.`,
-      );
+      throw new BadRequestException(`${label} ID must be a positive integer.`);
     }
 
     return parsed;
@@ -449,6 +442,41 @@ export class ChaptersService {
 
     const trimmed = value.trim();
     return trimmed || null;
+  }
+
+  private officerPhoto(value: string | null | undefined) {
+    if (value === undefined || value === null) {
+      return value;
+    }
+
+    const source = value.trim();
+    if (!source) {
+      return null;
+    }
+
+    const localPhoto =
+      /^\/assets\/people\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:png|jpe?g|webp|gif|avif)$/i;
+    if (source.length <= 500 && localPhoto.test(source)) {
+      return source;
+    }
+
+    try {
+      const url = new URL(source);
+      if (
+        source.length <= 500 &&
+        /^https?:\/\//i.test(source) &&
+        ["http:", "https:"].includes(url.protocol) &&
+        url.hostname
+      ) {
+        return source;
+      }
+    } catch {
+      // Invalid URLs use the same validation message as unsupported paths.
+    }
+
+    throw new BadRequestException(
+      "Photo must be an HTTP(S) URL or an image path under /assets/people/ (maximum 500 characters).",
+    );
   }
 
   private toPublicChapter(chapter: ChapterRecord) {
@@ -481,6 +509,7 @@ export class ChaptersService {
       position: officer.position,
       email: officer.email,
       contactNumber: officer.contactNumber,
+      photoUrl: officer.photoUrl,
       academicYear: officer.academicYear,
     };
   }

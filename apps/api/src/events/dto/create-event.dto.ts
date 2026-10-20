@@ -21,7 +21,7 @@ export class CreateEventDto {
 
   @IsOptional()
   @IsNumberString()
-  organizerChapterId?: string;
+  organizerChapterId?: string | null;
 
   @IsOptional()
   @IsString()

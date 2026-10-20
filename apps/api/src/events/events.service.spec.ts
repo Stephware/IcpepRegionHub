@@ -123,6 +123,21 @@ describe("EventsService", () => {
     expect(prisma.event.create).not.toHaveBeenCalled();
   });
 
+  it("creates a regional event with the null organizer sent by the admin form", async () => {
+    const { prisma, service } = createService();
+    prisma.event.create.mockResolvedValue({ ...event, isPublished: false });
+
+    const result = await service.createEvent({
+      title: "Regional Assembly",
+      eventType: "Assembly",
+      organizerChapterId: null,
+      startDateTime: "2099-11-10T01:00:00.000Z",
+    }, 1n);
+
+    expect(result.event.organizerChapterId).toBeNull();
+    expect(prisma.chapter.findUnique).not.toHaveBeenCalled();
+  });
+
   it("rejects an end date that is before the start date", async () => {
     const { service } = createService();
 
@@ -157,5 +172,57 @@ describe("EventsService", () => {
       }),
     );
     expect(result.event.status).toBe("Cancelled");
+  });
+
+  it("updates event details, organizer and registration settings", async () => {
+    const { prisma, service } = createService();
+    prisma.event.findUnique.mockResolvedValue(event);
+    prisma.chapter.findUnique.mockResolvedValue({ chapterId: 2n });
+    prisma.event.update.mockImplementation(async ({ data }) => ({
+      ...event, ...data,
+    }));
+
+    const result = await service.updateEvent(20n, {
+      title: "Updated assembly", organizerChapterId: "2", venue: "New venue",
+      startDateTime: "2099-12-10T01:00:00.000Z", endDateTime: "2099-12-10T04:00:00.000Z",
+      registrationDeadline: "2099-12-09T12:00:00.000Z", registrationLink: "https://example.com/new",
+      coverImageUrl: "/assets/events/assembly.png",
+    });
+
+    expect(result.event).toMatchObject({
+      title: "Updated assembly", organizerChapterId: "2", venue: "New venue",
+      startDateTime: new Date("2099-12-10T01:00:00.000Z"), endDateTime: new Date("2099-12-10T04:00:00.000Z"),
+      registrationDeadline: new Date("2099-12-09T12:00:00.000Z"), registrationLink: "https://example.com/new",
+      coverImageUrl: "/assets/events/assembly.png",
+    });
+  });
+
+  it.each([true, false])("sets event publication to %s", async (isPublished) => {
+    const { prisma, service } = createService();
+    prisma.event.findUnique.mockResolvedValue(event);
+    prisma.event.update.mockImplementation(async ({ data }) => ({ ...event, ...data }));
+    expect((await service.setPublished(20n, isPublished)).event.isPublished).toBe(isPublished);
+  });
+
+  it("requires restoring a cancelled event before publication", async () => {
+    const { prisma, service } = createService();
+    prisma.event.findUnique.mockResolvedValue({ ...event, status: "Cancelled" });
+    await expect(service.setPublished(20n, true)).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.event.update).not.toHaveBeenCalled();
+  });
+
+  it("restores a cancelled event and derives completed status from its dates", async () => {
+    const { prisma, service } = createService();
+    const past = { ...event, status: "Cancelled", startDateTime: new Date("2000-01-01"), endDateTime: new Date("2000-01-02") };
+    prisma.event.findUnique.mockResolvedValue(past);
+    prisma.event.update.mockImplementation(async ({ data }) => ({ ...past, ...data }));
+    expect((await service.setCancelled(20n, false)).event.status).toBe("Completed");
+  });
+
+  it("deletes an existing event", async () => {
+    const { prisma, service } = createService();
+    prisma.event.findUnique.mockResolvedValue(event);
+    await service.deleteEvent(20n);
+    expect(prisma.event.delete).toHaveBeenCalledWith({ where: { eventId: 20n } });
   });
 });

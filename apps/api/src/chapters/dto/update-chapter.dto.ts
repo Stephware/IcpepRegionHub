@@ -1,4 +1,10 @@
-import { IsEmail, IsOptional, IsString, MaxLength } from "class-validator";
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from "class-validator";
 
 export class UpdateChapterDto {
   @IsOptional()
@@ -17,6 +23,7 @@ export class UpdateChapterDto {
   acronym?: string;
 
   @IsOptional()
+  @ValidateIf((_object, value) => value !== "")
   @IsEmail()
   @MaxLength(256)
   officialEmail?: string;

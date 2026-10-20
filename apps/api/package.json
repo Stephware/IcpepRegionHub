@@ -16,7 +16,7 @@
     "predb:seed": "npm run prisma:generate",
     "db:seed": "prisma db seed",
     "prisma:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:push": "prisma db push && prisma db execute --file prisma/assistance-priority.sql",
     "db:setup": "npm run db:push && npm run db:seed"
   },
   "dependencies": {

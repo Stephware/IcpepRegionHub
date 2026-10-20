@@ -1,5 +1,6 @@
 "use client";
 
+import { Alert, LoadingState } from "@/components/ui/feedback";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createChapter,
@@ -37,6 +38,7 @@ const emptyOfficerForm: ChapterOfficerInput = {
   position: "",
   email: "",
   contactNumber: "",
+  photoUrl: "",
   academicYear: "",
 };
 
@@ -143,10 +145,7 @@ export function ChapterAdminManager() {
     setChapterForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateOfficerField(
-    field: keyof ChapterOfficerInput,
-    value: string,
-  ) {
+  function updateOfficerField(field: keyof ChapterOfficerInput, value: string) {
     setOfficerForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -203,6 +202,7 @@ export function ChapterAdminManager() {
       position: officer.position,
       email: officer.email ?? "",
       contactNumber: officer.contactNumber ?? "",
+      photoUrl: officer.photoUrl ?? "",
       academicYear: officer.academicYear,
     });
     setError("");
@@ -237,10 +237,7 @@ export function ChapterAdminManager() {
             editingOfficerId,
             officerForm,
           )
-        : await createChapterOfficer(
-            selectedChapter.chapterId,
-            officerForm,
-          );
+        : await createChapterOfficer(selectedChapter.chapterId, officerForm);
 
       setNotice(result.message);
       setEditingOfficerId(null);
@@ -275,14 +272,14 @@ export function ChapterAdminManager() {
   }
 
   if (loading) {
-    return <p className="mt-8 text-sm text-slate-600">Loading chapters...</p>;
+    return <LoadingState label="Loading chapters..." />;
   }
 
   return (
     <div className="mt-8 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <button
-          className="w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white"
+          className="w-full rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white"
           onClick={startCreateChapter}
           type="button"
         >
@@ -295,7 +292,7 @@ export function ChapterAdminManager() {
               <button
                 className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                   selectedChapter?.chapterId === chapter.chapterId
-                    ? "border-teal-300 bg-teal-50"
+                    ? "border-blue-300 bg-blue-50"
                     : "border-slate-200 bg-white hover:bg-slate-50"
                 }`}
                 key={chapter.chapterId}
@@ -328,21 +325,11 @@ export function ChapterAdminManager() {
       </aside>
 
       <div className="space-y-6">
-        {error ? (
-          <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </p>
-        ) : null}
-        {notice ? (
-          <p className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            {notice}
-          </p>
-        ) : null}
+        {error ? <Alert tone="error">{error}</Alert> : null}
+        {notice ? <Alert tone="success">{notice}</Alert> : null}
 
         {detailsLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
-            <p className="text-sm text-slate-600">Loading chapter details...</p>
-          </div>
+          <LoadingState label="Loading chapter details..." />
         ) : (
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -420,7 +407,7 @@ export function ChapterAdminManager() {
 
               <div className="sm:col-span-2">
                 <button
-                  className="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                  className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
                   disabled={savingChapter}
                   type="submit"
                 >
@@ -461,7 +448,9 @@ export function ChapterAdminManager() {
                         {officer.position} · AY {officer.academicYear}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {officer.isCurrent ? "Current officer" : "Former officer"}
+                        {officer.isCurrent
+                          ? "Current officer"
+                          : "Former officer"}
                         {officer.userId
                           ? ` · Linked user #${officer.userId}`
                           : ""}
@@ -537,9 +526,17 @@ export function ChapterAdminManager() {
                 value={officerForm.contactNumber ?? ""}
               />
 
+              <Field
+                label="Photo URL or /assets/people/ image path"
+                onChange={(value) => updateOfficerField("photoUrl", value)}
+                placeholder="/assets/people/officer.jpg"
+                maxLength={500}
+                value={officerForm.photoUrl ?? ""}
+              />
+
               <div className="flex gap-2 sm:col-span-2">
                 <button
-                  className="rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                  className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
                   disabled={savingOfficer}
                   type="submit"
                 >
@@ -574,6 +571,7 @@ type FieldProps = {
   type?: string;
   required?: boolean;
   placeholder?: string;
+  maxLength?: number;
 };
 
 function Field({
@@ -583,13 +581,15 @@ function Field({
   type = "text",
   required = false,
   placeholder,
+  maxLength,
 }: FieldProps) {
   return (
     <label className="text-sm font-medium text-slate-800">
       {label}
       <input
-        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
         onChange={(event) => onChange(event.target.value)}
+        maxLength={maxLength}
         placeholder={placeholder}
         required={required}
         type={type}

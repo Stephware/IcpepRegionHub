@@ -1,5 +1,14 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { BadRequestException, ConflictException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { validateSync } from "class-validator";
+import { CreateChapterDto } from "./dto/create-chapter.dto.js";
+import { UpdateChapterDto } from "./dto/update-chapter.dto.js";
+import { CreateChapterOfficerDto } from "./dto/create-chapter-officer.dto.js";
+import { UpdateChapterOfficerDto } from "./dto/update-chapter-officer.dto.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import { ChaptersService } from "./chapters.service.js";
 
@@ -137,6 +146,7 @@ describe("ChaptersService", () => {
         email: "juan@example.com",
         contactNumber: null,
         academicYear: "2026-2027",
+        photoUrl: "/assets/people/juan.jpg",
         isCurrent: true,
         createdAt: new Date("2026-10-06T00:00:00.000Z"),
         updatedAt: null,
@@ -154,5 +164,167 @@ describe("ChaptersService", () => {
       }),
     );
     expect(result[0]).not.toHaveProperty("isCurrent");
+    expect(result[0]).toHaveProperty("photoUrl", "/assets/people/juan.jpg");
   });
+
+  it("hides inactive chapter details and officers", async () => {
+    const { prisma, service } = createService();
+    prisma.chapter.findFirst.mockResolvedValue(null);
+
+    await expect(service.getPublicChapter(1n)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.listCurrentOfficers(1n)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.chapter.findFirst).toHaveBeenCalledWith({
+      where: { chapterId: 1n, status: "Active" },
+    });
+    expect(prisma.chapterOfficer.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [" https://example.com/photo.jpg ", "https://example.com/photo.jpg"],
+    ["http://example.com/photo.jpg", "http://example.com/photo.jpg"],
+    [
+      "/assets/people/chapter/officer.webp",
+      "/assets/people/chapter/officer.webp",
+    ],
+    [" ", null],
+    [null, null],
+  ])(
+    "saves and returns an officer photo source %s",
+    async (photoUrl, expected) => {
+      const { prisma, service } = createService();
+      prisma.chapter.findUnique.mockResolvedValue({ chapterId: 1n });
+      prisma.chapterOfficer.create.mockImplementation(
+        async ({ data }: { data: Record<string, unknown> }) => ({
+          ...data,
+          chapterOfficerId: 5n,
+          createdAt: new Date(),
+          updatedAt: null,
+        }),
+      );
+
+      const result = await service.createOfficer(1n, {
+        fullName: "Juan Dela Cruz",
+        position: "President",
+        academicYear: "2026-2027",
+        photoUrl,
+      });
+
+      expect(result.officer.photoUrl).toBe(expected);
+    },
+  );
+
+  it.each([
+    "javascript:alert(1)",
+    "data:image/png;base64,abc",
+    "//example.com/photo.jpg",
+    "/assets/branding/logo.png",
+    "/assets/people/../private.jpg",
+    "/assets/people/%2e%2e/private.jpg",
+    "/assets/people/officer.svg",
+    "https://",
+    "/assets/people/",
+  ])(
+    "rejects unsafe or unsupported officer photo source %s",
+    async (photoUrl) => {
+      const { prisma, service } = createService();
+      prisma.chapter.findUnique.mockResolvedValue({ chapterId: 1n });
+      prisma.chapterOfficer.create.mockResolvedValue({
+        chapterOfficerId: 5n,
+        chapterId: 1n,
+        userId: null,
+        fullName: "Juan Dela Cruz",
+        position: "President",
+        academicYear: "2026-2027",
+        email: null,
+        contactNumber: null,
+        photoUrl,
+        isCurrent: true,
+        createdAt: new Date(),
+        updatedAt: null,
+      });
+      await expect(
+        service.createOfficer(1n, {
+          fullName: "Juan Dela Cruz",
+          position: "President",
+          academicYear: "2026-2027",
+          photoUrl,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.chapterOfficer.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("clears a photo with an empty update and preserves it when omitted", async () => {
+    const { prisma, service } = createService();
+    prisma.chapterOfficer.findFirst.mockResolvedValue({ chapterOfficerId: 5n });
+    prisma.chapterOfficer.update.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        ...data,
+        chapterOfficerId: 5n,
+        chapterId: 1n,
+        userId: null,
+      }),
+    );
+    await service.updateOfficer(1n, 5n, { photoUrl: "" });
+    expect(prisma.chapterOfficer.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ photoUrl: null }),
+      }),
+    );
+    await service.updateOfficer(1n, 5n, { position: "Vice President" });
+    expect(prisma.chapterOfficer.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ photoUrl: undefined }),
+      }),
+    );
+  });
+});
+
+describe("officer photo DTOs", () => {
+  it.each([CreateChapterOfficerDto, UpdateChapterOfficerDto])(
+    "validates photo types and database length limits in %p",
+    (Dto) => {
+      for (const photoUrl of [42, `https://example.com/${"a".repeat(500)}`]) {
+        const dto = Object.assign(new Dto(), {
+          fullName: "Juan Dela Cruz",
+          position: "President",
+          academicYear: "2026-2027",
+          photoUrl,
+        });
+        expect(validateSync(dto).map((error) => error.property)).toContain(
+          "photoUrl",
+        );
+      }
+    },
+  );
+});
+
+describe("optional chapter form email", () => {
+  it.each([
+    [CreateChapterDto, "officialEmail"],
+    [UpdateChapterDto, "officialEmail"],
+    [CreateChapterOfficerDto, "email"],
+    [UpdateChapterOfficerDto, "email"],
+  ] as const)(
+    "allows the admin form to leave optional email blank in %p",
+    (Dto, field) => {
+      const dto = Object.assign(new Dto(), {
+        schoolName: "Sample University",
+        chapterName: "Sample University",
+        fullName: "Juan Dela Cruz",
+        position: "President",
+        academicYear: "2026-2027",
+        [field]: "",
+      });
+      expect(validateSync(dto).map((error) => error.property)).not.toContain(
+        field,
+      );
+      Object.assign(dto, { [field]: "invalid" });
+      expect(validateSync(dto).map((error) => error.property)).toContain(field);
+    },
+  );
 });

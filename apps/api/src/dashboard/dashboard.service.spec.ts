@@ -1,4 +1,5 @@
 import { describe, expect, it, jest } from "@jest/globals";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { UserRole } from "../common/constants/roles.js";
 import { DashboardService } from "./dashboard.service.js";
 
@@ -101,5 +102,74 @@ describe("DashboardService", () => {
         }),
       }),
     );
+  });
+
+  it.each([
+    [UserRole.ChapterOfficer, ["announcements", "assistanceRequests", "chapter", "collaborations", "events", "ownCollaborations"]],
+    [UserRole.RegionalOfficer, ["announcements", "assistanceRequests", "collaborations", "events"]],
+    [UserRole.RegionalAdmin, ["activeChapters", "announcements", "assistanceRequests", "collaborations", "draftAnnouncements", "draftEvents", "events", "pendingAccounts"]],
+  ])("returns only the data available to %s", async (role, keys) => {
+    const { service } = createService();
+
+    const result = await service.getDashboard({
+      userId: "12",
+      chapterId: role === UserRole.ChapterOfficer ? "1" : null,
+      firstName: "Officer",
+      lastName: "User",
+      email: "officer@example.com",
+      role,
+    });
+
+    expect(result.role).toBe(role);
+    expect(Object.keys(result.data).sort()).toEqual(keys);
+  });
+
+  it("preserves full collections for totals instead of truncating dashboard previews", async () => {
+    const { service, eventsService, assistanceService, usersService } = createService();
+    const events = Array.from({ length: 7 }, (_, index) => ({ eventId: String(index + 1) }));
+    const requests = Array.from({ length: 8 }, (_, index) => ({ assistanceRequestId: String(index + 1) }));
+    const pendingAccounts = Array.from({ length: 9 }, (_, index) => ({ userId: String(index + 1) }));
+    eventsService.listPublishedEvents.mockResolvedValue(events);
+    assistanceService.listRegionalRequests.mockResolvedValue(requests);
+    usersService.listPendingUsers.mockResolvedValue(pendingAccounts);
+
+    const result = await service.getDashboard({
+      userId: "12",
+      chapterId: null,
+      firstName: "Regional",
+      lastName: "Admin",
+      email: "admin@example.com",
+      role: UserRole.RegionalAdmin,
+    });
+
+    expect(result.data.events).toHaveLength(7);
+    expect(result.data.assistanceRequests).toHaveLength(8);
+    expect(result.data).toEqual(expect.objectContaining({ pendingAccounts }));
+  });
+
+  it.each([null, "", "invalid", "-1"])("rejects a chapter officer without a valid chapter ID: %s", async (chapterId) => {
+    const { service } = createService();
+
+    await expect(service.getDashboard({
+      userId: "12",
+      chapterId,
+      firstName: "Chapter",
+      lastName: "Officer",
+      email: "chapter@example.com",
+      role: UserRole.ChapterOfficer,
+    })).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("does not give an unsupported role an administrative dashboard", async () => {
+    const { service } = createService();
+
+    await expect(service.getDashboard({
+      userId: "12",
+      chapterId: null,
+      firstName: "Unknown",
+      lastName: "User",
+      email: "unknown@example.com",
+      role: "Visitor",
+    })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

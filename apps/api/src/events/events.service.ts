@@ -376,8 +376,8 @@ export class EventsService {
     return this.parseDate(value, label);
   }
 
-  private parseOptionalId(value: string | undefined, label: string) {
-    if (value === undefined || value.trim() === "") {
+  private parseOptionalId(value: string | null | undefined, label: string) {
+    if (value === undefined || value === null || value.trim() === "") {
       return null;
     }
 

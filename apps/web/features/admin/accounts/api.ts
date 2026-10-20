@@ -34,12 +34,19 @@ export function setAdminAccountActive(userId: string, isActive: boolean) {
   );
 }
 
-export function changeAdminAccountRole(userId: string, role: UserRole) {
+export function changeAdminAccountRole(
+  userId: string,
+  role: UserRole,
+  chapterId?: string,
+) {
   return apiFetch<{ message: string; user: AdminAccount }>(
     `/admin/accounts/${userId}/role`,
     {
       method: "PATCH",
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({
+        role,
+        chapterId: role === "ChapterOfficer" ? chapterId : undefined,
+      }),
     },
   );
 }

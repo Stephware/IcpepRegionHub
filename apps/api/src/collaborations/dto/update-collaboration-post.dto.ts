@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from "class-validator";
 
 export class UpdateCollaborationPostDto {
@@ -41,6 +42,7 @@ export class UpdateCollaborationPostDto {
   contactName?: string;
 
   @IsOptional()
+  @ValidateIf((_object, value) => value !== "")
   @IsEmail()
   @MaxLength(256)
   contactEmail?: string;

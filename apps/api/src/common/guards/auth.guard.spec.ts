@@ -1,17 +1,11 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import {
-  UnauthorizedException,
-  type ExecutionContext,
-} from "@nestjs/common";
+import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
 import type { SessionTokenService } from "../../auth/session-token.service.js";
 import { UserRole } from "../constants/roles.js";
 import type { UsersService } from "../../users/users.service.js";
 import { AuthGuard } from "./auth.guard.js";
 
-function context(headers: {
-  authorization?: string;
-  cookie?: string;
-}) {
+function context(headers: { authorization?: string; cookie?: string }) {
   const request = { headers };
 
   return {
@@ -109,6 +103,45 @@ describe("AuthGuard", () => {
       authorization: "Bearer signed-token",
     });
 
+    await expect(guard.canActivate(executionContext)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+  it("uses current role and chapter instead of stale token permissions", async () => {
+    const { guard, usersService } = createGuard();
+    usersService.findById.mockResolvedValue({
+      userId: 10n,
+      chapterId: null,
+      firstName: "Juan",
+      lastName: "Dela Cruz",
+      email: "juan@example.com",
+      role: UserRole.RegionalOfficer,
+      isApproved: true,
+      isActive: true,
+    });
+    const { context: executionContext, request } = context({
+      authorization: "Bearer signed-token",
+    });
+    await expect(guard.canActivate(executionContext)).resolves.toBe(true);
+    expect(request).toHaveProperty(
+      "user",
+      expect.objectContaining({
+        role: UserRole.RegionalOfficer,
+        chapterId: null,
+      }),
+    );
+  });
+
+  it("rejects an account whose approval was revoked even with a valid token", async () => {
+    const { guard, usersService } = createGuard();
+    usersService.findById.mockResolvedValue({
+      userId: 10n,
+      isActive: true,
+      isApproved: false,
+    });
+    const { context: executionContext } = context({
+      authorization: "Bearer signed-token",
+    });
     await expect(guard.canActivate(executionContext)).rejects.toBeInstanceOf(
       UnauthorizedException,
     );

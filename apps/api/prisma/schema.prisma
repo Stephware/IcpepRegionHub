@@ -70,6 +70,7 @@ model ChapterOfficer {
   position         String    @db.VarChar(100)
   email            String?   @db.VarChar(256)
   contactNumber    String?   @map("contact_number") @db.VarChar(30)
+  photoUrl         String?   @map("photo_url") @db.VarChar(500)
   academicYear     String    @map("academic_year") @db.VarChar(20)
   isCurrent        Boolean   @default(true) @map("is_current")
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

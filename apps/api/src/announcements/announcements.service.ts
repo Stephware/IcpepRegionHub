@@ -213,6 +213,7 @@ export class AnnouncementsService {
       where: { announcementId },
       data: {
         isPublished,
+        isPinned: isPublished ? undefined : false,
         publishedAt: isPublished
           ? existing.publishedAt ?? new Date()
           : null,

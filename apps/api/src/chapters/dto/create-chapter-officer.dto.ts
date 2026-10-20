@@ -1,4 +1,11 @@
-import { IsEmail, IsNumberString, IsOptional, IsString, MaxLength } from "class-validator";
+import {
+  IsEmail,
+  IsNumberString,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from "class-validator";
 
 export class CreateChapterOfficerDto {
   @IsOptional()
@@ -14,9 +21,15 @@ export class CreateChapterOfficerDto {
   position!: string;
 
   @IsOptional()
+  @ValidateIf((_object, value) => value !== "")
   @IsEmail()
   @MaxLength(256)
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  photoUrl?: string | null;
 
   @IsOptional()
   @IsString()

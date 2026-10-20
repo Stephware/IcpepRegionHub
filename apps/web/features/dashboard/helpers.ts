@@ -16,6 +16,12 @@ export function recentAnnouncements(
     .slice(0, limit);
 }
 
+export function upcomingEventCount(events: EventItem[]) {
+  return events.filter(
+    (event) => event.status === "Upcoming" || event.status === "Ongoing",
+  ).length;
+}
+
 export function upcomingEvents(events: EventItem[], limit = 3) {
   return [...events]
     .filter(
@@ -71,6 +77,17 @@ export function urgentAssistanceCount(
   return requests.filter(
     (request) =>
       request.priority === "Urgent" &&
+      request.status !== "Resolved" &&
+      request.status !== "Closed",
+  ).length;
+}
+
+export function unassignedAssistanceCount(
+  requests: AssistanceRequestSummary[],
+) {
+  return requests.filter(
+    (request) =>
+      !request.assignedTo &&
       request.status !== "Resolved" &&
       request.status !== "Closed",
   ).length;

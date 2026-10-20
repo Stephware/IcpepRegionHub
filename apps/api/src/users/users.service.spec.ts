@@ -36,7 +36,7 @@ function createService() {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
       create: jest.fn(),
-      update: jest.fn(),
+      update: jest.fn().mockResolvedValue(pendingUser),
     },
   };
 
@@ -214,26 +214,74 @@ describe("UsersService account administration", () => {
     expect(result.user.isActive).toBe(false);
   });
 
-  it("changes an existing account role", async () => {
+  it.each([UserRole.RegionalOfficer, UserRole.RegionalAdmin])(
+    "clears the chapter when changing to %s",
+    async (role) => {
+      const { prisma, service } = createService();
+      prisma.user.findUnique.mockResolvedValue({ userId: 10n });
+      prisma.user.update.mockResolvedValue({
+        ...pendingUser,
+        role,
+        chapterId: null,
+        chapter: null,
+        isApproved: true,
+      });
+
+      const result = await service.changeRole(10n, role);
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 10n },
+          data: { role, chapterId: null },
+        }),
+      );
+      expect(result.user.role).toBe(role);
+      expect(result.user.chapterId).toBeNull();
+    },
+  );
+  it.each([undefined, "", "0", "-1", "1.2", "invalid"])(
+    "requires a positive chapter ID for ChapterOfficer (%s)",
+    async (chapterId) => {
+      const { prisma, service } = createService();
+      prisma.user.findUnique.mockResolvedValue({ userId: 10n });
+      await expect(
+        service.changeRole(10n, UserRole.ChapterOfficer, chapterId),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([null, { chapterId: 1n, status: "Inactive" }])(
+    "rejects a missing or inactive chapter for a role change",
+    async (chapter) => {
+      const { prisma, service } = createService();
+      prisma.user.findUnique.mockResolvedValue({ userId: 10n });
+      prisma.chapter.findUnique.mockResolvedValue(chapter);
+      await expect(
+        service.changeRole(10n, UserRole.ChapterOfficer, "1"),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("links an active chapter when changing a regional account to ChapterOfficer", async () => {
     const { prisma, service } = createService();
-    prisma.user.findUnique.mockResolvedValue({ userId: 10n });
-    prisma.user.update.mockResolvedValue({
+    prisma.user.findUnique.mockResolvedValue({
       ...pendingUser,
       role: UserRole.RegionalOfficer,
-      isApproved: true,
+      chapterId: null,
     });
-
-    const result = await service.changeRole(
-      10n,
-      UserRole.RegionalOfficer,
-    );
-
+    prisma.chapter.findUnique.mockResolvedValue({
+      chapterId: 1n,
+      status: "Active",
+    });
+    prisma.user.update.mockResolvedValue(pendingUser);
+    const result = await service.changeRole(10n, UserRole.ChapterOfficer, "1");
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: 10n },
-        data: { role: UserRole.RegionalOfficer },
+        data: { role: UserRole.ChapterOfficer, chapterId: 1n },
       }),
     );
-    expect(result.user.role).toBe(UserRole.RegionalOfficer);
+    expect(result.user.chapterId).toBe("1");
   });
 });

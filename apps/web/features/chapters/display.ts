@@ -21,3 +21,11 @@ export function chapterOptionLabel(
 function normalizeLabel(value: string) {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US");
 }
+
+export function officerInitials(fullName: string) {
+  const names = fullName.trim().split(/\s+/).filter(Boolean);
+  if (!names.length) return "IC";
+  return `${names[0][0]}${names.length > 1 ? names[names.length - 1][0] : ""}`.toLocaleUpperCase(
+    "en-US",
+  );
+}

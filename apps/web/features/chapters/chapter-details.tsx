@@ -2,12 +2,11 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { Alert, LoadingState } from "@/components/ui/feedback";
+import { OfficerPhoto } from "./officer-photo";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  getPublicChapter,
-  listCurrentChapterOfficers,
-} from "./api";
+import { getPublicChapter, listCurrentChapterOfficers } from "./api";
 import { chapterDisplayName } from "./display";
 import type { Chapter, ChapterOfficer } from "./types";
 
@@ -55,7 +54,7 @@ export function ChapterDetails() {
   if (loading) {
     return (
       <main className="mx-auto max-w-5xl px-6 py-12">
-        <p className="text-sm text-slate-600">Loading chapter...</p>
+        <LoadingState label="Loading chapter..." />
       </main>
     );
   }
@@ -63,19 +62,19 @@ export function ChapterDetails() {
   if (error || !chapter) {
     return (
       <main className="mx-auto max-w-5xl px-6 py-12">
-        <Link className="text-sm font-medium text-teal-700" href="/chapters">
+        <Link className="text-sm font-medium text-blue-700" href="/chapters">
           ← Back to chapters
         </Link>
-        <p className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error || "Chapter was not found."}
-        </p>
+        <div className="mt-6">
+          <Alert tone="error">{error || "Chapter was not found."}</Alert>
+        </div>
       </main>
     );
   }
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <Link className="text-sm font-medium text-teal-700" href="/chapters">
+      <Link className="text-sm font-medium text-blue-700" href="/chapters">
         ← Back to chapters
       </Link>
 
@@ -88,13 +87,13 @@ export function ChapterDetails() {
               src={chapter.logoUrl}
             />
           ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-teal-50 text-2xl font-semibold text-teal-700">
+            <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-blue-50 text-2xl font-semibold text-blue-700">
               {chapter.acronym?.slice(0, 3) ?? "IC"}
             </div>
           )}
 
           <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-teal-700">
+            <p className="text-sm font-medium uppercase tracking-wide text-blue-700">
               ICpEP Region 3 Chapter
             </p>
             <h1 className="mt-2 text-3xl font-semibold text-slate-950">
@@ -127,7 +126,7 @@ export function ChapterDetails() {
           {chapter.facebookUrl ? (
             <div className="sm:col-span-2">
               <a
-                className="text-sm font-medium text-teal-700 hover:underline"
+                className="text-sm font-medium text-blue-700 hover:underline"
                 href={chapter.facebookUrl}
                 rel="noreferrer"
                 target="_blank"
@@ -150,19 +149,21 @@ export function ChapterDetails() {
                 className="rounded-xl border border-slate-200 bg-white p-5"
                 key={officer.chapterOfficerId}
               >
-                <p className="font-semibold text-slate-950">
+                <OfficerPhoto
+                  fullName={officer.fullName}
+                  photoUrl={officer.photoUrl}
+                />
+                <p className="mt-3 font-semibold text-slate-950">
                   {officer.fullName}
                 </p>
-                <p className="mt-1 text-sm font-medium text-teal-700">
+                <p className="mt-1 text-sm font-medium text-blue-700">
                   {officer.position}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
                   AY {officer.academicYear}
                 </p>
                 {officer.email ? (
-                  <p className="mt-3 text-sm text-slate-700">
-                    {officer.email}
-                  </p>
+                  <p className="mt-3 text-sm text-slate-700">{officer.email}</p>
                 ) : null}
                 {officer.contactNumber ? (
                   <p className="mt-1 text-sm text-slate-700">

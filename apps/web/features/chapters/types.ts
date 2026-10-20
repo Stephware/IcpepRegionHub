@@ -22,6 +22,7 @@ export type ChapterOfficer = {
   position: string;
   email: string | null;
   contactNumber: string | null;
+  photoUrl: string | null;
   academicYear: string;
 };
 
@@ -50,5 +51,6 @@ export type ChapterOfficerInput = {
   position: string;
   email?: string;
   contactNumber?: string;
+  photoUrl?: string;
   academicYear: string;
 };
