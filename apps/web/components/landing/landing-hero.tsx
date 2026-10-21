@@ -75,7 +75,7 @@ export function LandingHero({
                   <Link
                     className={`inline-flex min-h-12 items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-[0_12px_30px_rgba(2,30,100,.28)] transition hover:-translate-y-0.5 ${
                       secondary
-                        ? "border border-white/70 bg-white text-blue-950 hover:bg-blue-50"
+                        ? "border border-white/70 bg-white text-black hover:bg-blue-50 hover:text-black"
                         : "border border-blue-300/30 bg-[#1167ff] text-white hover:bg-[#0758e5]"
                     }`}
                     href={action.href}
