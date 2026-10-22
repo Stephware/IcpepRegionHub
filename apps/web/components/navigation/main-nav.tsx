@@ -51,7 +51,7 @@ export function MainNav() {
         <Button
           aria-expanded={open}
           aria-label="Toggle navigation"
-          className="md:hidden"
+          className="xl:hidden"
           onClick={() => setOpen((current) => !current)}
           size="sm"
           variant="secondary"
@@ -61,7 +61,7 @@ export function MainNav() {
 
         <nav
           aria-label="Primary navigation"
-          className="hidden items-center gap-3 md:flex"
+          className="hidden items-center gap-3 xl:flex"
         >
           <NavItems
             loading={loading}
@@ -76,14 +76,15 @@ export function MainNav() {
       {open ? (
         <nav
           aria-label="Mobile navigation"
-          className="mt-3 grid gap-1 border-t border-slate-200 pt-3 md:hidden"
+          className="mt-3 grid gap-1 border-t border-slate-200 pt-3 xl:hidden"
         >
           <NavItems
             loading={loading}
             navLinkClass={(href) =>
               cn(
                 "rounded-lg px-3 py-2.5 text-sm font-medium",
-                pathname === href || (href !== "/" && pathname.startsWith(`${href}/`))
+                pathname === href ||
+                  (href !== "/" && pathname.startsWith(`${href}/`))
                   ? "bg-blue-50 text-blue-700"
                   : "text-slate-700 hover:bg-slate-50",
               )
@@ -152,8 +153,7 @@ function NavItems({
             Dashboard
           </Link>
 
-          {user.role === "RegionalAdmin" ||
-          user.role === "RegionalOfficer" ? (
+          {user.role === "RegionalAdmin" || user.role === "RegionalOfficer" ? (
             <Link
               className={navLinkClass("/regional/assistance")}
               href="/regional/assistance"
@@ -172,6 +172,14 @@ function NavItems({
               Admin
             </Link>
           ) : null}
+
+          <Link
+            className={navLinkClass("/account")}
+            href="/account"
+            onClick={onNavigate}
+          >
+            Account
+          </Link>
 
           <button
             className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"

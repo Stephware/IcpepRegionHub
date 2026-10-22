@@ -30,6 +30,9 @@ const baseAnnouncement = {
 };
 
 const baseEvent: EventItem = {
+  scope: "Regional",
+  editorialState: "Published",
+  publishedAt: "2026-10-01T00:00:00Z",
   eventId: "1",
   title: "Event",
   description: null,
@@ -46,6 +49,7 @@ const baseEvent: EventItem = {
     userId: "1",
     firstName: "Regional",
     lastName: "Admin",
+    facultyDesignation: null,
   },
 };
 

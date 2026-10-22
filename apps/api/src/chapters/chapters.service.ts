@@ -7,6 +7,7 @@ import {
 import { PrismaService } from "../prisma/prisma.service.js";
 import { CreateChapterDto } from "./dto/create-chapter.dto.js";
 import { CreateChapterOfficerDto } from "./dto/create-chapter-officer.dto.js";
+import { UpdateChapterContactDto } from "./dto/update-chapter-contact.dto.js";
 import { UpdateChapterDto } from "./dto/update-chapter.dto.js";
 import { UpdateChapterOfficerDto } from "./dto/update-chapter-officer.dto.js";
 
@@ -208,6 +209,23 @@ export class ChaptersService {
     return {
       message: "Chapter updated successfully.",
       chapter: this.toAdminChapter(chapter),
+    };
+  }
+
+  async updateChapterContacts(chapterId: bigint, input: UpdateChapterContactDto) {
+    await this.getPublicChapter(chapterId);
+    const chapter = await this.prisma.chapter.update({
+      where: { chapterId },
+      data: {
+        officialEmail: this.optionalText(input.officialEmail),
+        contactNumber: this.optionalText(input.contactNumber),
+        facebookUrl: this.optionalText(input.facebookUrl),
+        updatedAt: new Date(),
+      },
+    });
+    return {
+      message: "Chapter contacts updated successfully.",
+      chapter: this.toPublicChapter(chapter),
     };
   }
 

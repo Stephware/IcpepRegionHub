@@ -1,8 +1,12 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { AuthenticatedUser } from "../common/guards/auth.guard.js";
+import { UserRole } from "../common/constants/roles.js";
+import type { Prisma } from "../generated/prisma/client.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { CreateEventDto } from "./dto/create-event.dto.js";
 import { UpdateEventDto } from "./dto/update-event.dto.js";
@@ -21,6 +25,8 @@ type EventRecord = {
   coverImageUrl: string | null;
   status: string;
   isPublished: boolean;
+  scope: string;
+  publishedAt: Date | null;
   createdByUserId: bigint;
   createdAt: Date;
   updatedAt: Date | null;
@@ -34,6 +40,7 @@ type EventRecord = {
     userId: bigint;
     firstName: string;
     lastName: string;
+    facultyDesignation: string | null;
   };
 };
 
@@ -51,6 +58,7 @@ const eventInclude = {
       userId: true,
       firstName: true,
       lastName: true,
+      facultyDesignation: true,
     },
   },
 } as const;
@@ -101,16 +109,34 @@ export class EventsService {
     return this.toAdminEvent(event);
   }
 
-  async createEvent(input: CreateEventDto, createdByUserId: bigint) {
-    const organizerChapterId = this.parseOptionalId(
-      input.organizerChapterId,
-      "Organizer chapter",
-    );
-
-    if (organizerChapterId !== null) {
-      await this.ensureChapterExists(organizerChapterId);
+  async listContributorEvents(actor: AuthenticatedUser) {
+    const attribution = this.permittedAttribution(actor);
+    if (
+      actor.role !== UserRole.RegionalAdmin &&
+      attribution.scope !== "Regional" &&
+      attribution.organizerChapterId === null
+    ) {
+      return [];
     }
+    const events = await this.prisma.event.findMany({
+      where:
+        actor.role === UserRole.RegionalAdmin
+          ? {}
+          : { createdByUserId: BigInt(actor.userId), ...attribution },
+      include: eventInclude,
+      orderBy: [{ startDateTime: "desc" }, { createdAt: "desc" }],
+    });
+    return events.map((event) => this.toAdminEvent(event));
+  }
 
+  async getContributorEvent(eventId: bigint, actor: AuthenticatedUser) {
+    const event = await this.findEvent(eventId);
+    this.ensureOwnership(event, actor);
+    return this.toAdminEvent(event);
+  }
+
+  async createEvent(input: CreateEventDto, actor: AuthenticatedUser) {
+    const attribution = await this.resolveAttribution(input, actor);
     const startDateTime = this.parseDate(input.startDateTime, "Start date");
     const endDateTime = this.parseOptionalDate(input.endDateTime, "End date");
     const registrationDeadline = this.parseOptionalDate(
@@ -118,29 +144,36 @@ export class EventsService {
       "Registration deadline",
     );
 
-    this.validateSchedule(
-      startDateTime,
-      endDateTime,
-      registrationDeadline,
-    );
+    this.validateSchedule(startDateTime, endDateTime, registrationDeadline);
 
-    const event = await this.prisma.event.create({
-      data: {
-        title: this.requiredText(input.title, "Title"),
-        description: this.optionalText(input.description),
-        eventType: this.requiredText(input.eventType, "Event type"),
-        organizerChapterId,
-        venue: this.optionalText(input.venue),
-        startDateTime,
-        endDateTime,
-        registrationDeadline,
-        registrationLink: this.optionalText(input.registrationLink),
-        coverImageUrl: this.optionalText(input.coverImageUrl),
-        status: "Upcoming",
-        isPublished: false,
-        createdByUserId,
-      },
-      include: eventInclude,
+    const event = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.event.create({
+        data: {
+          title: this.requiredText(input.title, "Title"),
+          description: this.optionalText(input.description),
+          eventType: this.requiredText(input.eventType, "Event type"),
+          ...attribution,
+          venue: this.optionalText(input.venue),
+          startDateTime,
+          endDateTime,
+          registrationDeadline,
+          registrationLink: this.optionalText(input.registrationLink),
+          coverImageUrl: this.optionalText(input.coverImageUrl),
+          status: "Upcoming",
+          isPublished: false,
+          createdByUserId: BigInt(actor.userId),
+        },
+        include: eventInclude,
+      });
+      await tx.contentAction.create({
+        data: {
+          resource: "Event",
+          resourceId: created.eventId,
+          action: "Created",
+          actorUserId: BigInt(actor.userId),
+        },
+      });
+      return created;
     });
 
     return {
@@ -149,20 +182,14 @@ export class EventsService {
     };
   }
 
-  async updateEvent(eventId: bigint, input: UpdateEventDto) {
+  async updateEvent(
+    eventId: bigint,
+    input: UpdateEventDto,
+    actor: AuthenticatedUser,
+  ) {
     const existing = await this.findEvent(eventId);
-
-    const organizerChapterId =
-      input.organizerChapterId === undefined
-        ? undefined
-        : this.parseOptionalId(
-            input.organizerChapterId ?? undefined,
-            "Organizer chapter",
-          );
-
-    if (organizerChapterId !== undefined && organizerChapterId !== null) {
-      await this.ensureChapterExists(organizerChapterId);
-    }
+    this.ensureOwnership(existing, actor);
+    const attribution = await this.resolveAttribution(input, actor, existing);
 
     const startDateTime =
       input.startDateTime === undefined
@@ -180,15 +207,11 @@ export class EventsService {
             "Registration deadline",
           );
 
-    this.validateSchedule(
-      startDateTime,
-      endDateTime,
-      registrationDeadline,
-    );
+    this.validateSchedule(startDateTime, endDateTime, registrationDeadline);
 
-    const event = await this.prisma.event.update({
-      where: { eventId },
-      data: {
+    const event = await this.updateWithAction(
+      eventId,
+      {
         title:
           input.title === undefined
             ? undefined
@@ -198,12 +221,11 @@ export class EventsService {
           input.eventType === undefined
             ? undefined
             : this.requiredText(input.eventType, "Event type"),
-        organizerChapterId,
+        ...attribution,
         venue: this.optionalText(input.venue),
         startDateTime:
           input.startDateTime === undefined ? undefined : startDateTime,
-        endDateTime:
-          input.endDateTime === undefined ? undefined : endDateTime,
+        endDateTime: input.endDateTime === undefined ? undefined : endDateTime,
         registrationDeadline:
           input.registrationDeadline === undefined
             ? undefined
@@ -212,8 +234,9 @@ export class EventsService {
         coverImageUrl: this.optionalText(input.coverImageUrl),
         updatedAt: new Date(),
       },
-      include: eventInclude,
-    });
+      actor,
+      "Updated",
+    );
 
     return {
       message: "Event updated successfully.",
@@ -221,8 +244,16 @@ export class EventsService {
     };
   }
 
-  async setPublished(eventId: bigint, isPublished: boolean) {
+  async setPublished(
+    eventId: bigint,
+    isPublished: boolean,
+    actor: AuthenticatedUser,
+  ) {
     const existing = await this.findEvent(eventId);
+    this.ensureOwnership(existing, actor);
+    if (isPublished) {
+      await this.resolveAttribution({}, actor, existing);
+    }
 
     if (isPublished && existing.status === "Cancelled") {
       throw new BadRequestException(
@@ -230,14 +261,18 @@ export class EventsService {
       );
     }
 
-    const event = await this.prisma.event.update({
-      where: { eventId },
-      data: {
+    const event = await this.updateWithAction(
+      eventId,
+      {
         isPublished,
+        publishedAt: isPublished
+          ? (existing.publishedAt ?? new Date())
+          : undefined,
         updatedAt: new Date(),
       },
-      include: eventInclude,
-    });
+      actor,
+      isPublished ? "Published" : "Unpublished",
+    );
 
     return {
       message: isPublished
@@ -247,17 +282,25 @@ export class EventsService {
     };
   }
 
-  async setCancelled(eventId: bigint, isCancelled: boolean) {
-    await this.ensureEventExists(eventId);
-
-    const event = await this.prisma.event.update({
-      where: { eventId },
-      data: {
+  async setCancelled(
+    eventId: bigint,
+    isCancelled: boolean,
+    actor: AuthenticatedUser,
+  ) {
+    const existing = await this.findEvent(eventId);
+    this.ensureOwnership(existing, actor);
+    if (!isCancelled && existing.isPublished) {
+      await this.resolveAttribution({}, actor, existing);
+    }
+    const event = await this.updateWithAction(
+      eventId,
+      {
         status: isCancelled ? "Cancelled" : "Upcoming",
         updatedAt: new Date(),
       },
-      include: eventInclude,
-    });
+      actor,
+      isCancelled ? "Cancelled" : "Restored",
+    );
 
     return {
       message: isCancelled
@@ -267,11 +310,24 @@ export class EventsService {
     };
   }
 
-  async deleteEvent(eventId: bigint) {
-    await this.ensureEventExists(eventId);
-
-    await this.prisma.event.delete({
-      where: { eventId },
+  async deleteEvent(eventId: bigint, actor: AuthenticatedUser) {
+    const existing = await this.findEvent(eventId);
+    this.ensureOwnership(existing, actor);
+    if (actor.role !== UserRole.RegionalAdmin) {
+      throw new ForbiddenException(
+        "Only Regional Admins can remove events. Cancel or unpublish your event instead.",
+      );
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.event.delete({ where: { eventId } });
+      await tx.contentAction.create({
+        data: {
+          resource: "Event",
+          resourceId: eventId,
+          action: "Deleted",
+          actorUserId: BigInt(actor.userId),
+        },
+      });
     });
 
     return {
@@ -292,26 +348,131 @@ export class EventsService {
     return event;
   }
 
-  private async ensureEventExists(eventId: bigint) {
-    const event = await this.prisma.event.findUnique({
-      where: { eventId },
-      select: { eventId: true },
-    });
+  private permittedAttribution(actor: AuthenticatedUser) {
+    const scope =
+      actor.role === UserRole.ChapterOfficer
+        ? "Chapter"
+        : actor.role === UserRole.FacultyRepresentative
+          ? "Academic"
+          : "Regional";
+    return {
+      scope,
+      organizerChapterId:
+        scope === "Regional" || !actor.chapterId
+          ? null
+          : BigInt(actor.chapterId),
+    };
+  }
 
-    if (!event) {
-      throw new NotFoundException("Event was not found.");
+  private ensureOwnership(
+    event: Pick<
+      EventRecord,
+      "createdByUserId" | "scope" | "organizerChapterId"
+    >,
+    actor: AuthenticatedUser,
+  ) {
+    if (actor.role === UserRole.RegionalAdmin) return;
+    if (event.createdByUserId !== BigInt(actor.userId)) {
+      throw new ForbiddenException("You can only manage your own events.");
+    }
+    const permitted = this.permittedAttribution(actor);
+    if (
+      event.scope !== permitted.scope ||
+      event.organizerChapterId !== permitted.organizerChapterId ||
+      (permitted.scope !== "Regional" && permitted.organizerChapterId === null)
+    ) {
+      throw new ForbiddenException(
+        "This event is outside your current role or institution.",
+      );
     }
   }
 
-  private async ensureChapterExists(chapterId: bigint) {
-    const chapter = await this.prisma.chapter.findUnique({
-      where: { chapterId },
-      select: { chapterId: true },
-    });
-
-    if (!chapter) {
-      throw new BadRequestException("Organizer chapter was not found.");
+  private async resolveAttribution(
+    input: Pick<UpdateEventDto, "scope" | "organizerChapterId">,
+    actor: AuthenticatedUser,
+    existing?: Pick<EventRecord, "scope" | "organizerChapterId">,
+  ) {
+    const permittedScope = this.permittedAttribution(actor).scope;
+    const isAdmin = actor.role === UserRole.RegionalAdmin;
+    const scope = isAdmin
+      ? (input.scope ?? existing?.scope ?? "Regional")
+      : permittedScope;
+    if (!["Regional", "Chapter", "Academic"].includes(scope)) {
+      throw new BadRequestException("Event scope is invalid.");
     }
+    if (
+      !isAdmin &&
+      ((input.scope !== undefined && input.scope !== scope) ||
+        (existing && existing.scope !== scope))
+    ) {
+      throw new ForbiddenException(
+        "This event scope is not permitted for your role.",
+      );
+    }
+    const assignedChapterId =
+      permittedScope === "Regional" ? null : actor.chapterId;
+    if (!isAdmin && permittedScope !== "Regional" && !assignedChapterId) {
+      throw new ForbiddenException(
+        "An assigned active institution is required.",
+      );
+    }
+    const organizerChapterId = isAdmin
+      ? input.organizerChapterId === undefined
+        ? (existing?.organizerChapterId ?? null)
+        : this.parseOptionalId(input.organizerChapterId, "Organizer chapter")
+      : assignedChapterId
+        ? BigInt(assignedChapterId)
+        : null;
+    if (
+      !isAdmin &&
+      ((input.organizerChapterId !== undefined &&
+        this.parseOptionalId(input.organizerChapterId, "Organizer chapter") !==
+          organizerChapterId) ||
+        (existing && existing.organizerChapterId !== organizerChapterId))
+    ) {
+      throw new ForbiddenException(
+        "You can only publish under your assigned organizer.",
+      );
+    }
+    if (scope !== "Regional" && organizerChapterId === null) {
+      throw new BadRequestException(
+        "Chapter and academic events require an affiliated institution.",
+      );
+    }
+    if (organizerChapterId !== null) {
+      const chapter = await this.prisma.chapter.findUnique({
+        where: { chapterId: organizerChapterId },
+        select: { chapterId: true, status: true },
+      });
+      if (!chapter || chapter.status !== "Active") {
+        throw new BadRequestException("Organizer institution must be active.");
+      }
+    }
+    return { scope, organizerChapterId };
+  }
+
+  private async updateWithAction(
+    eventId: bigint,
+    data: Prisma.EventUncheckedUpdateInput,
+    actor: AuthenticatedUser,
+    action: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const event = await tx.event.update({
+        where: { eventId },
+        data,
+        include: eventInclude,
+      });
+      await tx.contentAction.create({
+        data: {
+          resource: "Event",
+          resourceId: eventId,
+          action,
+          actorUserId: BigInt(actor.userId),
+        },
+      });
+      return event;
+    });
   }
 
   private validateSchedule(
@@ -335,7 +496,9 @@ export class EventsService {
     }
   }
 
-  private deriveStatus(event: Pick<EventRecord, "status" | "startDateTime" | "endDateTime">) {
+  private deriveStatus(
+    event: Pick<EventRecord, "status" | "startDateTime" | "endDateTime">,
+  ) {
     if (event.status === "Cancelled") {
       return "Cancelled";
     }
@@ -365,10 +528,7 @@ export class EventsService {
     return date;
   }
 
-  private parseOptionalDate(
-    value: string | null | undefined,
-    label: string,
-  ) {
+  private parseOptionalDate(value: string | null | undefined, label: string) {
     if (value === undefined || value === null || value.trim() === "") {
       return null;
     }
@@ -382,17 +542,13 @@ export class EventsService {
     }
 
     if (!/^\d+$/.test(value)) {
-      throw new BadRequestException(
-        `${label} ID must be a positive integer.`,
-      );
+      throw new BadRequestException(`${label} ID must be a positive integer.`);
     }
 
     const parsed = BigInt(value);
 
     if (parsed <= 0n) {
-      throw new BadRequestException(
-        `${label} ID must be a positive integer.`,
-      );
+      throw new BadRequestException(`${label} ID must be a positive integer.`);
     }
 
     return parsed;
@@ -430,6 +586,14 @@ export class EventsService {
       registrationLink: event.registrationLink,
       coverImageUrl: event.coverImageUrl,
       status: this.deriveStatus(event),
+      scope: event.scope,
+      publishedAt: event.publishedAt,
+      editorialState:
+        event.status === "Cancelled"
+          ? "Cancelled"
+          : event.isPublished
+            ? "Published"
+            : "Draft",
       organizer: event.organizer
         ? {
             chapterId: event.organizer.chapterId.toString(),
@@ -442,6 +606,10 @@ export class EventsService {
         userId: event.createdBy.userId.toString(),
         firstName: event.createdBy.firstName,
         lastName: event.createdBy.lastName,
+        facultyDesignation:
+          event.scope === "Academic"
+            ? event.createdBy.facultyDesignation
+            : null,
       },
     };
   }

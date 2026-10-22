@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/features/auth/auth-context";
 import { listPublicChapters } from "@/features/chapters/api";
 import type { Chapter } from "@/features/chapters/types";
 import {
@@ -11,8 +12,12 @@ import {
   setEventPublished,
   updateEvent,
 } from "./api";
-import { eventOrganizerLabel, formatEventDateTime } from "./format";
-import type { AdminEvent, EventInput } from "./types";
+import {
+  eventOrganizerLabel,
+  eventScopeLabel,
+  formatEventDateTime,
+} from "./format";
+import type { AdminEvent, EventInput, EventScope } from "./types";
 
 const emptyForm: EventInput = {
   title: "",
@@ -46,7 +51,20 @@ function toIsoOrNull(value: string | null | undefined) {
   return value ? new Date(value).toISOString() : null;
 }
 
-export function EventAdminManager() {
+export function EventAdminManager({
+  contributor = false,
+}: {
+  contributor?: boolean;
+}) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "RegionalAdmin";
+  const base = contributor ? "/contributor/events" : "/admin/events";
+  const scope: EventScope =
+    user?.role === "ChapterOfficer"
+      ? "Chapter"
+      : user?.role === "FacultyRepresentative"
+        ? "Academic"
+        : "Regional";
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selected, setSelected] = useState<AdminEvent | null>(null);
@@ -57,15 +75,18 @@ export function EventAdminManager() {
   const [notice, setNotice] = useState("");
 
   const loadEvents = useCallback(async () => {
-    const items = await listAdminEvents();
+    const items = await listAdminEvents(base);
     setEvents(items);
     return items;
-  }, []);
+  }, [base]);
 
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([listAdminEvents(), listPublicChapters()])
+    Promise.all([
+      listAdminEvents(base),
+      isAdmin ? listPublicChapters() : Promise.resolve([]),
+    ])
       .then(([eventItems, chapterItems]) => {
         if (!cancelled) {
           setEvents(eventItems);
@@ -90,7 +111,7 @@ export function EventAdminManager() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [base, isAdmin]);
 
   function updateField<K extends keyof EventInput>(
     field: K,
@@ -114,6 +135,7 @@ export function EventAdminManager() {
   function selectEvent(event: AdminEvent) {
     setSelected(event);
     setForm({
+      scope: event.scope,
       title: event.title,
       description: event.description ?? "",
       eventType: event.eventType,
@@ -144,9 +166,13 @@ export function EventAdminManager() {
         registrationDeadline: toIsoOrNull(form.registrationDeadline),
       };
 
+      if (!isAdmin) {
+        delete payload.organizerChapterId;
+        delete payload.scope;
+      }
       const result = selected
-        ? await updateEvent(selected.eventId, payload)
-        : await createEvent(payload);
+        ? await updateEvent(selected.eventId, payload, base)
+        : await createEvent(payload, base);
 
       setSelected(result.event);
       setNotice(result.message);
@@ -166,6 +192,7 @@ export function EventAdminManager() {
       const result = await setEventPublished(
         event.eventId,
         !event.isPublished,
+        base,
       );
       setSelected(result.event);
       setNotice(result.message);
@@ -183,6 +210,7 @@ export function EventAdminManager() {
       const result = await setEventCancelled(
         event.eventId,
         event.storedStatus !== "Cancelled",
+        base,
       );
       setSelected(result.event);
       setNotice(result.message);
@@ -193,7 +221,9 @@ export function EventAdminManager() {
   }
 
   async function removeEvent(event: AdminEvent) {
-    if (!window.confirm(`Delete "${event.title}"? This action cannot be undone.`)) {
+    if (
+      !window.confirm(`Delete "${event.title}"? This action cannot be undone.`)
+    ) {
       return;
     }
 
@@ -201,7 +231,7 @@ export function EventAdminManager() {
     setNotice("");
 
     try {
-      const result = await deleteEvent(event.eventId);
+      const result = await deleteEvent(event.eventId, base);
       setSelected(null);
       setForm(emptyForm);
       setNotice(result.message);
@@ -246,7 +276,7 @@ export function EventAdminManager() {
                   {formatEventDateTime(event.startDateTime)}
                 </span>
                 <span className="mt-1 block text-xs text-slate-500">
-                  {eventOrganizerLabel(event.organizer)}
+                  {eventOrganizerLabel(event.organizer, event.scope)}
                 </span>
                 <span className="mt-2 flex flex-wrap gap-1">
                   <span
@@ -256,7 +286,7 @@ export function EventAdminManager() {
                         : "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    {event.isPublished ? "Published" : "Draft"}
+                    {event.editorialState}
                   </span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -305,8 +335,7 @@ export function EventAdminManager() {
               <button
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
                 disabled={
-                  !selected.isPublished &&
-                  selected.storedStatus === "Cancelled"
+                  !selected.isPublished && selected.storedStatus === "Cancelled"
                 }
                 onClick={() => void togglePublished(selected)}
                 type="button"
@@ -318,15 +347,19 @@ export function EventAdminManager() {
                 onClick={() => void toggleCancelled(selected)}
                 type="button"
               >
-                {selected.storedStatus === "Cancelled" ? "Restore" : "Cancel event"}
+                {selected.storedStatus === "Cancelled"
+                  ? "Restore"
+                  : "Cancel event"}
               </button>
-              <button
-                className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700"
-                onClick={() => void removeEvent(selected)}
-                type="button"
-              >
-                Delete
-              </button>
+              {isAdmin ? (
+                <button
+                  className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700"
+                  onClick={() => void removeEvent(selected)}
+                  type="button"
+                >
+                  Delete
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -338,10 +371,11 @@ export function EventAdminManager() {
               <span className="font-medium text-slate-900">
                 {selected.status}
               </span>{" "}
-              · {selected.isPublished ? "Published" : "Draft"}
+              · {selected.editorialState}
             </p>
             <p className="mt-1">
-              Organizer: {eventOrganizerLabel(selected.organizer)}
+              Organizer:{" "}
+              {eventOrganizerLabel(selected.organizer, selected.scope)}
             </p>
           </div>
         ) : null}
@@ -367,24 +401,48 @@ export function EventAdminManager() {
             value={form.eventType}
           />
 
-          <label className="text-sm font-medium text-slate-800">
-            Organizer
-            <select
-              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
-              onChange={(event) =>
-                updateField("organizerChapterId", event.target.value || null)
-              }
-              value={form.organizerChapterId ?? ""}
-            >
-              <option value="">ICpEP Region 3</option>
-              {chapters.map((chapter) => (
-                <option key={chapter.chapterId} value={chapter.chapterId}>
-                  {chapter.chapterName}
-                  {chapter.acronym ? ` (${chapter.acronym})` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
+          {isAdmin ? (
+            <label className="text-sm font-medium text-slate-800">
+              Scope
+              <select
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5"
+                value={form.scope ?? "Regional"}
+                onChange={(event) =>
+                  updateField("scope", event.target.value as EventScope)
+                }
+              >
+                <option value="Regional">Regional</option>
+                <option value="Chapter">Chapter</option>
+                <option value="Academic">Academic</option>
+              </select>
+            </label>
+          ) : (
+            <p className="self-center text-sm text-slate-600">
+              {eventScopeLabel(scope)} · Your organizer is assigned from your
+              account.
+            </p>
+          )}
+
+          {isAdmin ? (
+            <label className="text-sm font-medium text-slate-800">
+              Organizer
+              <select
+                className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
+                onChange={(event) =>
+                  updateField("organizerChapterId", event.target.value || null)
+                }
+                value={form.organizerChapterId ?? ""}
+              >
+                <option value="">ICpEP Region 3</option>
+                {chapters.map((chapter) => (
+                  <option key={chapter.chapterId} value={chapter.chapterId}>
+                    {chapter.chapterName}
+                    {chapter.acronym ? ` (${chapter.acronym})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
 
           <Field
             label="Start"
@@ -427,7 +485,9 @@ export function EventAdminManager() {
             Description
             <textarea
               className="mt-2 min-h-48 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-teal-700"
-              onChange={(event) => updateField("description", event.target.value)}
+              onChange={(event) =>
+                updateField("description", event.target.value)
+              }
               value={form.description ?? ""}
             />
           </label>
@@ -438,11 +498,7 @@ export function EventAdminManager() {
               disabled={saving || !form.startDateTime}
               type="submit"
             >
-              {saving
-                ? "Saving..."
-                : selected
-                  ? "Save changes"
-                  : "Create draft"}
+              {saving ? "Saving..." : selected ? "Save changes" : "Save Draft"}
             </button>
           </div>
         </form>

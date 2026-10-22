@@ -52,10 +52,12 @@ export class AnnouncementAdminController {
   updateAnnouncement(
     @Param("id") id: string,
     @Body() input: UpdateAnnouncementDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.announcementsService.updateAnnouncement(
       this.parseId(id),
       input,
+      user,
     );
   }
 
@@ -63,10 +65,12 @@ export class AnnouncementAdminController {
   setPublished(
     @Param("id") id: string,
     @Body() input: UpdateAnnouncementPublishDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.announcementsService.setPublished(
       this.parseId(id),
       input.isPublished,
+      user,
     );
   }
 
@@ -74,16 +78,21 @@ export class AnnouncementAdminController {
   setPinned(
     @Param("id") id: string,
     @Body() input: UpdateAnnouncementPinDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.announcementsService.setPinned(
       this.parseId(id),
       input.isPinned,
+      user,
     );
   }
 
   @Delete(":id")
-  deleteAnnouncement(@Param("id") id: string) {
-    return this.announcementsService.deleteAnnouncement(this.parseId(id));
+  deleteAnnouncement(
+    @Param("id") id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.announcementsService.deleteAnnouncement(this.parseId(id), user);
   }
 
   private parseId(id: string) {

@@ -57,17 +57,18 @@ export class AccountAdminController {
       this.parseUserId(id),
       input.role,
       input.chapterId,
+      input.facultyDesignation,
     );
   }
 
   private parseUserId(id: string) {
-    if (!/^\d+$/.test(id)) {
+    if (!/^[1-9]\d{0,18}$/.test(id)) {
       throw new BadRequestException("User ID must be a positive integer.");
     }
 
     const userId = BigInt(id);
 
-    if (userId <= 0n) {
+    if (userId > 9223372036854775807n) {
       throw new BadRequestException("User ID must be a positive integer.");
     }
 

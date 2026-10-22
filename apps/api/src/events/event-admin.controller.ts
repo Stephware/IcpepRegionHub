@@ -42,33 +42,47 @@ export class EventAdminController {
     @Body() input: CreateEventDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.eventsService.createEvent(input, BigInt(user.userId));
+    return this.eventsService.createEvent(input, user);
   }
 
   @Patch(":id")
-  updateEvent(@Param("id") id: string, @Body() input: UpdateEventDto) {
-    return this.eventsService.updateEvent(this.parseId(id), input);
+  updateEvent(
+    @Param("id") id: string,
+    @Body() input: UpdateEventDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.eventsService.updateEvent(this.parseId(id), input, user);
   }
 
   @Patch(":id/publish")
   setPublished(
     @Param("id") id: string,
     @Body() input: UpdateEventPublishDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.eventsService.setPublished(this.parseId(id), input.isPublished);
+    return this.eventsService.setPublished(
+      this.parseId(id),
+      input.isPublished,
+      user,
+    );
   }
 
   @Patch(":id/cancel")
   setCancelled(
     @Param("id") id: string,
     @Body() input: UpdateEventCancelledDto,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.eventsService.setCancelled(this.parseId(id), input.isCancelled);
+    return this.eventsService.setCancelled(
+      this.parseId(id),
+      input.isCancelled,
+      user,
+    );
   }
 
   @Delete(":id")
-  deleteEvent(@Param("id") id: string) {
-    return this.eventsService.deleteEvent(this.parseId(id));
+  deleteEvent(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.eventsService.deleteEvent(this.parseId(id), user);
   }
 
   private parseId(id: string) {

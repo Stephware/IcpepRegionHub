@@ -8,6 +8,9 @@ import type { EventItem } from "../features/events/types";
 
 const event: EventItem = {
   eventId: "1",
+  scope: "Regional",
+  editorialState: "Published",
+  publishedAt: "2026-10-01T00:00:00Z",
   title: "Regional Assembly",
   description: null,
   eventType: "Assembly",
@@ -23,6 +26,7 @@ const event: EventItem = {
     userId: "1",
     firstName: "Regional",
     lastName: "Admin",
+    facultyDesignation: null,
   },
 };
 
@@ -41,6 +45,19 @@ describe("event calendar helpers", () => {
 
   it("labels regional events without a chapter organizer", () => {
     expect(eventOrganizerLabel(null)).toBe("ICpEP Region 3");
+  });
+
+  it("attributes academic events to the institution rather than the student chapter", () => {
+    expect(
+      eventOrganizerLabel(
+        {
+          schoolName: "University",
+          chapterName: "Student Chapter",
+          acronym: "UC",
+        },
+        "Academic",
+      ),
+    ).toBe("University");
   });
 
   it("closes registration after the deadline", () => {

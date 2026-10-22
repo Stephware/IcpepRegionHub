@@ -1,3 +1,5 @@
+export type EventScope = "Regional" | "Chapter" | "Academic";
+
 export type EventOrganizer = {
   chapterId: string;
   schoolName: string;
@@ -9,10 +11,14 @@ export type EventAuthor = {
   userId: string;
   firstName: string;
   lastName: string;
+  facultyDesignation: string | null;
 };
 
 export type EventItem = {
   eventId: string;
+  scope: EventScope;
+  editorialState: "Draft" | "Published" | "Cancelled";
+  publishedAt: string | null;
   title: string;
   description: string | null;
   eventType: string;
@@ -37,6 +43,7 @@ export type AdminEvent = EventItem & {
 };
 
 export type EventInput = {
+  scope?: EventScope;
   title: string;
   description?: string;
   eventType: string;

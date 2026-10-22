@@ -62,8 +62,32 @@ function createService() {
 }
 
 describe("DashboardService", () => {
+  it("gives faculty only common activity and their institution", async () => {
+    const { service, assistanceService, collaborationsService, usersService } =
+      createService();
+    const result = await service.getDashboard({
+      userId: "15",
+      chapterId: "1",
+      firstName: "Faculty",
+      lastName: "Member",
+      email: "faculty@example.com",
+      role: "FacultyRepresentative",
+    });
+    expect(result.role).toBe("FacultyRepresentative");
+    expect(Object.keys(result.data).sort()).toEqual([
+      "announcements",
+      "chapter",
+      "collaborations",
+      "events",
+    ]);
+    expect(assistanceService.listChapterRequests).not.toHaveBeenCalled();
+    expect(assistanceService.listRegionalRequests).not.toHaveBeenCalled();
+    expect(collaborationsService.listMyPosts).not.toHaveBeenCalled();
+    expect(usersService.listPendingUsers).not.toHaveBeenCalled();
+  });
   it("builds the chapter officer dashboard in one backend operation", async () => {
-    const { service, collaborationsService, assistanceService } = createService();
+    const { service, collaborationsService, assistanceService } =
+      createService();
 
     const result = await service.getDashboard({
       userId: "12",
@@ -105,9 +129,34 @@ describe("DashboardService", () => {
   });
 
   it.each([
-    [UserRole.ChapterOfficer, ["announcements", "assistanceRequests", "chapter", "collaborations", "events", "ownCollaborations"]],
-    [UserRole.RegionalOfficer, ["announcements", "assistanceRequests", "collaborations", "events"]],
-    [UserRole.RegionalAdmin, ["activeChapters", "announcements", "assistanceRequests", "collaborations", "draftAnnouncements", "draftEvents", "events", "pendingAccounts"]],
+    [
+      UserRole.ChapterOfficer,
+      [
+        "announcements",
+        "assistanceRequests",
+        "chapter",
+        "collaborations",
+        "events",
+        "ownCollaborations",
+      ],
+    ],
+    [
+      UserRole.RegionalOfficer,
+      ["announcements", "assistanceRequests", "collaborations", "events"],
+    ],
+    [
+      UserRole.RegionalAdmin,
+      [
+        "activeChapters",
+        "announcements",
+        "assistanceRequests",
+        "collaborations",
+        "draftAnnouncements",
+        "draftEvents",
+        "events",
+        "pendingAccounts",
+      ],
+    ],
   ])("returns only the data available to %s", async (role, keys) => {
     const { service } = createService();
 
@@ -125,10 +174,17 @@ describe("DashboardService", () => {
   });
 
   it("preserves full collections for totals instead of truncating dashboard previews", async () => {
-    const { service, eventsService, assistanceService, usersService } = createService();
-    const events = Array.from({ length: 7 }, (_, index) => ({ eventId: String(index + 1) }));
-    const requests = Array.from({ length: 8 }, (_, index) => ({ assistanceRequestId: String(index + 1) }));
-    const pendingAccounts = Array.from({ length: 9 }, (_, index) => ({ userId: String(index + 1) }));
+    const { service, eventsService, assistanceService, usersService } =
+      createService();
+    const events = Array.from({ length: 7 }, (_, index) => ({
+      eventId: String(index + 1),
+    }));
+    const requests = Array.from({ length: 8 }, (_, index) => ({
+      assistanceRequestId: String(index + 1),
+    }));
+    const pendingAccounts = Array.from({ length: 9 }, (_, index) => ({
+      userId: String(index + 1),
+    }));
     eventsService.listPublishedEvents.mockResolvedValue(events);
     assistanceService.listRegionalRequests.mockResolvedValue(requests);
     usersService.listPendingUsers.mockResolvedValue(pendingAccounts);
@@ -147,29 +203,36 @@ describe("DashboardService", () => {
     expect(result.data).toEqual(expect.objectContaining({ pendingAccounts }));
   });
 
-  it.each([null, "", "invalid", "-1"])("rejects a chapter officer without a valid chapter ID: %s", async (chapterId) => {
-    const { service } = createService();
+  it.each([null, "", "invalid", "-1"])(
+    "rejects a chapter officer without a valid chapter ID: %s",
+    async (chapterId) => {
+      const { service } = createService();
 
-    await expect(service.getDashboard({
-      userId: "12",
-      chapterId,
-      firstName: "Chapter",
-      lastName: "Officer",
-      email: "chapter@example.com",
-      role: UserRole.ChapterOfficer,
-    })).rejects.toBeInstanceOf(BadRequestException);
-  });
+      await expect(
+        service.getDashboard({
+          userId: "12",
+          chapterId,
+          firstName: "Chapter",
+          lastName: "Officer",
+          email: "chapter@example.com",
+          role: UserRole.ChapterOfficer,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    },
+  );
 
   it("does not give an unsupported role an administrative dashboard", async () => {
     const { service } = createService();
 
-    await expect(service.getDashboard({
-      userId: "12",
-      chapterId: null,
-      firstName: "Unknown",
-      lastName: "User",
-      email: "unknown@example.com",
-      role: "Visitor",
-    })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.getDashboard({
+        userId: "12",
+        chapterId: null,
+        firstName: "Unknown",
+        lastName: "User",
+        email: "unknown@example.com",
+        role: "Visitor",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

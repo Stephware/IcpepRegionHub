@@ -1,4 +1,4 @@
-import type { UserRole } from "@/features/auth/types";
+import type { FacultyDesignation, UserRole } from "@/features/auth/types";
 
 export type AdminAccountChapter = {
   chapterId: string;
@@ -14,6 +14,7 @@ export type AdminAccount = {
   lastName: string;
   email: string;
   role: UserRole;
+  facultyDesignation?: FacultyDesignation | null;
   isApproved: boolean;
   isActive: boolean;
   createdAt: string;

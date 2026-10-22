@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { getPublicEvent } from "./api";
 import {
   eventOrganizerLabel,
+  eventScopeLabel,
   formatEventDateTime,
   isRegistrationOpen,
 } from "./format";
@@ -103,6 +104,9 @@ export function EventDetails() {
             >
               {event.status}
             </span>
+            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+              {eventScopeLabel(event.scope)}
+            </span>
             <span className="rounded-full bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700">
               {event.eventType}
             </span>
@@ -112,8 +116,17 @@ export function EventDetails() {
             {event.title}
           </h1>
           <p className="mt-3 text-slate-600">
-            Organized by {eventOrganizerLabel(event.organizer)}
+            Organized by {eventOrganizerLabel(event.organizer, event.scope)}
           </p>
+
+          {event.scope === "Academic" ? (
+            <p className="mt-2 text-sm text-slate-600">
+              Organizer: {event.createdBy.firstName} {event.createdBy.lastName}
+              {event.createdBy.facultyDesignation
+                ? ` · ${event.createdBy.facultyDesignation}`
+                : ""}
+            </p>
+          ) : null}
 
           {event.status === "Cancelled" ? (
             <p className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -122,7 +135,10 @@ export function EventDetails() {
           ) : null}
 
           <dl className="mt-8 grid gap-5 border-y border-slate-200 py-6 sm:grid-cols-2">
-            <Info label="Starts" value={formatEventDateTime(event.startDateTime)} />
+            <Info
+              label="Starts"
+              value={formatEventDateTime(event.startDateTime)}
+            />
             <Info
               label="Ends"
               value={

@@ -10,10 +10,7 @@ import {
   updateAnnouncement,
 } from "./api";
 import { announcementExcerpt, formatAnnouncementDate } from "./format";
-import type {
-  AdminAnnouncement,
-  AnnouncementInput,
-} from "./types";
+import type { AdminAnnouncement, AnnouncementInput } from "./types";
 
 const emptyForm: AnnouncementInput = {
   title: "",
@@ -41,7 +38,11 @@ function toFormDate(value: string | null) {
   return local.toISOString().slice(0, 16);
 }
 
-export function AnnouncementAdminManager() {
+export function AnnouncementAdminManager({
+  scope = "admin",
+}: {
+  scope?: "admin" | "regional";
+}) {
   const [announcements, setAnnouncements] = useState<AdminAnnouncement[]>([]);
   const [selected, setSelected] = useState<AdminAnnouncement | null>(null);
   const [form, setForm] = useState<AnnouncementInput>(emptyForm);
@@ -51,15 +52,15 @@ export function AnnouncementAdminManager() {
   const [notice, setNotice] = useState("");
 
   const loadAnnouncements = useCallback(async () => {
-    const items = await listAdminAnnouncements();
+    const items = await listAdminAnnouncements(scope);
     setAnnouncements(items);
     return items;
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     let cancelled = false;
 
-    listAdminAnnouncements()
+    listAdminAnnouncements(scope)
       .then((items) => {
         if (!cancelled) {
           setAnnouncements(items);
@@ -83,7 +84,7 @@ export function AnnouncementAdminManager() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scope]);
 
   function updateField<K extends keyof AnnouncementInput>(
     field: K,
@@ -136,8 +137,8 @@ export function AnnouncementAdminManager() {
       };
 
       const result = selected
-        ? await updateAnnouncement(selected.announcementId, payload)
-        : await createAnnouncement(payload);
+        ? await updateAnnouncement(selected.announcementId, payload, scope)
+        : await createAnnouncement(payload, scope);
 
       setSelected(result.announcement);
       setNotice(result.message);
@@ -157,6 +158,7 @@ export function AnnouncementAdminManager() {
       const result = await setAnnouncementPublished(
         announcement.announcementId,
         !announcement.isPublished,
+        scope,
       );
       setNotice(result.message);
       setSelected(result.announcement);
@@ -196,7 +198,10 @@ export function AnnouncementAdminManager() {
     setNotice("");
 
     try {
-      const result = await deleteAnnouncement(announcement.announcementId);
+      const result = await deleteAnnouncement(
+        announcement.announcementId,
+        scope,
+      );
       setNotice(result.message);
       setSelected(null);
       setForm(emptyForm);
@@ -207,7 +212,9 @@ export function AnnouncementAdminManager() {
   }
 
   if (loading) {
-    return <p className="mt-8 text-sm text-slate-600">Loading announcements...</p>;
+    return (
+      <p className="mt-8 text-sm text-slate-600">Loading announcements...</p>
+    );
   }
 
   return (
@@ -297,14 +304,16 @@ export function AnnouncementAdminManager() {
               >
                 {selected.isPublished ? "Unpublish" : "Publish"}
               </button>
-              <button
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-                disabled={!selected.isPublished}
-                onClick={() => void togglePinned(selected)}
-                type="button"
-              >
-                {selected.isPinned ? "Unpin" : "Pin"}
-              </button>
+              {scope === "admin" ? (
+                <button
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+                  disabled={!selected.isPublished}
+                  onClick={() => void togglePinned(selected)}
+                  type="button"
+                >
+                  {selected.isPinned ? "Unpin" : "Pin"}
+                </button>
+              ) : null}
               <button
                 className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700"
                 onClick={() => void removeAnnouncement(selected)}
@@ -401,11 +410,7 @@ export function AnnouncementAdminManager() {
             disabled={saving}
             type="submit"
           >
-            {saving
-              ? "Saving..."
-              : selected
-                ? "Save changes"
-                : "Create draft"}
+            {saving ? "Saving..." : selected ? "Save changes" : "Create draft"}
           </button>
         </form>
       </section>

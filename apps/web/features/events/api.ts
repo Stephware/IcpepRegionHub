@@ -9,20 +9,24 @@ export function getPublicEvent(eventId: string) {
   return apiFetch<EventItem>(`/events/${eventId}`);
 }
 
-export function listAdminEvents() {
-  return apiFetch<AdminEvent[]>("/admin/events");
+export function listAdminEvents(base = "/admin/events") {
+  return apiFetch<AdminEvent[]>(base);
 }
 
-export function createEvent(input: EventInput) {
-  return apiFetch<{ message: string; event: AdminEvent }>("/admin/events", {
+export function createEvent(input: EventInput, base = "/admin/events") {
+  return apiFetch<{ message: string; event: AdminEvent }>(base, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function updateEvent(eventId: string, input: Partial<EventInput>) {
+export function updateEvent(
+  eventId: string,
+  input: Partial<EventInput>,
+  base = "/admin/events",
+) {
   return apiFetch<{ message: string; event: AdminEvent }>(
-    `/admin/events/${eventId}`,
+    `${base}/${eventId}`,
     {
       method: "PATCH",
       body: JSON.stringify(input),
@@ -30,9 +34,13 @@ export function updateEvent(eventId: string, input: Partial<EventInput>) {
   );
 }
 
-export function setEventPublished(eventId: string, isPublished: boolean) {
+export function setEventPublished(
+  eventId: string,
+  isPublished: boolean,
+  base = "/admin/events",
+) {
   return apiFetch<{ message: string; event: AdminEvent }>(
-    `/admin/events/${eventId}/publish`,
+    `${base}/${eventId}/publish`,
     {
       method: "PATCH",
       body: JSON.stringify({ isPublished }),
@@ -40,9 +48,13 @@ export function setEventPublished(eventId: string, isPublished: boolean) {
   );
 }
 
-export function setEventCancelled(eventId: string, isCancelled: boolean) {
+export function setEventCancelled(
+  eventId: string,
+  isCancelled: boolean,
+  base = "/admin/events",
+) {
   return apiFetch<{ message: string; event: AdminEvent }>(
-    `/admin/events/${eventId}/cancel`,
+    `${base}/${eventId}/cancel`,
     {
       method: "PATCH",
       body: JSON.stringify({ isCancelled }),
@@ -50,8 +62,8 @@ export function setEventCancelled(eventId: string, isCancelled: boolean) {
   );
 }
 
-export function deleteEvent(eventId: string) {
-  return apiFetch<{ message: string }>(`/admin/events/${eventId}`, {
+export function deleteEvent(eventId: string, base = "/admin/events") {
+  return apiFetch<{ message: string }>(`${base}/${eventId}`, {
     method: "DELETE",
   });
 }

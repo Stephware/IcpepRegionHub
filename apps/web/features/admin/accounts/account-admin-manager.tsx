@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChapterSelect } from "@/features/chapters/chapter-select";
-import type { UserRole } from "@/features/auth/types";
+import {
+  facultyDesignations,
+  type FacultyDesignation,
+  type UserRole,
+} from "@/features/auth/types";
 import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +36,7 @@ const filters: AdminAccountFilter[] = [
 
 const roles: UserRole[] = [
   "ChapterOfficer",
+  "FacultyRepresentative",
   "RegionalOfficer",
   "RegionalAdmin",
 ];
@@ -60,6 +65,7 @@ export function AccountAdminManager() {
     userId: string;
     role: UserRole;
     chapterId: string;
+    facultyDesignation: FacultyDesignation | "";
   } | null>(null);
 
   useEffect(() => {
@@ -166,7 +172,7 @@ export function AccountAdminManager() {
             <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">Account</th>
-                <th className="px-4 py-3">Chapter</th>
+                <th className="px-4 py-3">Institution</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">State</th>
                 <th className="px-4 py-3">Actions</th>
@@ -195,6 +201,11 @@ export function AccountAdminManager() {
                         ? (account.chapter.acronym ??
                           account.chapter.chapterName)
                         : "Regional"}
+                      {account.facultyDesignation ? (
+                        <p className="mt-1 text-xs">
+                          {account.facultyDesignation}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-4">
                       <Select
@@ -208,6 +219,8 @@ export function AccountAdminManager() {
                             userId: account.userId,
                             role: event.target.value as UserRole,
                             chapterId: account.chapterId ?? "",
+                            facultyDesignation:
+                              account.facultyDesignation ?? "",
                           })
                         }
                         value={
@@ -218,18 +231,19 @@ export function AccountAdminManager() {
                       >
                         {roles.map((role) => (
                           <option key={role} value={role}>
-                            {role}
+                            {role.replace(/([a-z])([A-Z])/g, "$1 $2")}
                           </option>
                         ))}
                       </Select>
                       {roleEdit?.userId === account.userId ? (
                         <div className="mt-3 space-y-3">
-                          {roleEdit.role === "ChapterOfficer" ? (
+                          {roleEdit.role === "ChapterOfficer" ||
+                          roleEdit.role === "FacultyRepresentative" ? (
                             <label
                               className="block text-xs font-medium text-slate-600"
                               htmlFor="chapterId"
                             >
-                              Active chapter
+                              Active institution
                               <ChapterSelect
                                 onChange={(chapterId) =>
                                   setRoleEdit({ ...roleEdit, chapterId })
@@ -239,12 +253,38 @@ export function AccountAdminManager() {
                               />
                             </label>
                           ) : null}
+                          {roleEdit.role === "FacultyRepresentative" ? (
+                            <label className="block text-xs font-medium text-slate-600">
+                              Faculty designation
+                              <Select
+                                required
+                                value={roleEdit.facultyDesignation}
+                                onChange={(event) =>
+                                  setRoleEdit({
+                                    ...roleEdit,
+                                    facultyDesignation: event.target
+                                      .value as FacultyDesignation,
+                                  })
+                                }
+                              >
+                                <option value="">Select designation</option>
+                                {facultyDesignations.map((designation) => (
+                                  <option key={designation} value={designation}>
+                                    {designation}
+                                  </option>
+                                ))}
+                              </Select>
+                            </label>
+                          ) : null}
                           <div className="flex gap-2">
                             <Button
                               disabled={
                                 busy ||
-                                (roleEdit.role === "ChapterOfficer" &&
-                                  !roleEdit.chapterId)
+                                ((roleEdit.role === "ChapterOfficer" ||
+                                  roleEdit.role === "FacultyRepresentative") &&
+                                  !roleEdit.chapterId) ||
+                                (roleEdit.role === "FacultyRepresentative" &&
+                                  !roleEdit.facultyDesignation)
                               }
                               onClick={() =>
                                 void runAction(account, () =>
@@ -252,6 +292,7 @@ export function AccountAdminManager() {
                                     account.userId,
                                     roleEdit.role,
                                     roleEdit.chapterId,
+                                    roleEdit.facultyDesignation || undefined,
                                   ),
                                 )
                               }

@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
 import { AdminOverviewService } from "../admin/admin-overview.service.js";
 import { AnnouncementsService } from "../announcements/announcements.service.js";
 import { AssistanceRequestsService } from "../assistance-requests/assistance-requests.service.js";
@@ -30,11 +34,24 @@ export class DashboardService {
       return this.getRegionalOfficerDashboard();
     }
 
+    if (user.role === UserRole.FacultyRepresentative) {
+      const [common, chapter] = await Promise.all([
+        this.loadCommonData(),
+        this.chaptersService.getPublicChapter(this.requireChapterId(user)),
+      ]);
+      return {
+        role: UserRole.FacultyRepresentative,
+        data: { ...common, chapter },
+      };
+    }
+
     if (user.role === UserRole.RegionalAdmin) {
       return this.getRegionalAdminDashboard();
     }
 
-    throw new ForbiddenException("Your account role does not have a dashboard.");
+    throw new ForbiddenException(
+      "Your account role does not have a dashboard.",
+    );
   }
 
   private async loadCommonData() {

@@ -89,10 +89,13 @@ describe("demo walkthrough fixtures", () => {
       "auf@hub-demo.test",
       "bulacan@hub-demo.test",
       "pending@hub-demo.test",
+      "faculty@hub-demo.test",
     ]);
     expect(
       data.users
-        .filter((user) => user.role !== "ChapterOfficer")
+        .filter((user) =>
+          ["RegionalOfficer", "RegionalAdmin"].includes(user.role),
+        )
         .every((user) => user.chapterId === null),
     ).toBe(true);
     expect(
@@ -114,7 +117,26 @@ describe("demo walkthrough fixtures", () => {
       ),
     ).toBe(true);
     expect(data.announcements.some((item) => !item.isPublished)).toBe(true);
-    expect(data.events).toHaveLength(3);
+    expect(data.events).toHaveLength(4);
+    const faculty = data.users.find(
+      (user) => user.email === "faculty@hub-demo.test",
+    );
+    expect(faculty).toMatchObject({
+      role: "FacultyRepresentative",
+      chapterId: 1n,
+      facultyDesignation: "Faculty Adviser",
+    });
+    expect(data.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scope: "Academic",
+          organizerChapterId: 1n,
+          createdByUserId: faculty?.userId,
+          isPublished: true,
+          publishedAt: now,
+        }),
+      ]),
+    );
     expect(
       data.events.every(
         (event) =>

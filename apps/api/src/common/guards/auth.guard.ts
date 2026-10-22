@@ -17,6 +17,7 @@ export type AuthenticatedUser = {
   lastName: string;
   email: string;
   role: string;
+  facultyDesignation?: string | null;
 };
 
 type AuthenticatedRequest = {
@@ -44,18 +45,19 @@ export class AuthGuard implements CanActivate {
 
     const payload = this.tokenService.verify(token);
 
-    let userId: bigint;
-
-    try {
-      userId = BigInt(payload.sub);
-    } catch {
+    if (
+      !/^[1-9]\d{0,18}$/.test(payload.sub) ||
+      BigInt(payload.sub) > 9223372036854775807n
+    ) {
       throw new UnauthorizedException("Invalid authentication token.");
     }
-
+    const userId = BigInt(payload.sub);
     const user = await this.usersService.findById(userId);
 
     if (!user || !user.isActive || !user.isApproved) {
-      throw new UnauthorizedException("This account is not allowed to sign in.");
+      throw new UnauthorizedException(
+        "This account is not allowed to sign in.",
+      );
     }
 
     request.user = {
@@ -65,6 +67,7 @@ export class AuthGuard implements CanActivate {
       lastName: user.lastName,
       email: user.email,
       role: user.role,
+      facultyDesignation: user.facultyDesignation ?? null,
     };
 
     return true;

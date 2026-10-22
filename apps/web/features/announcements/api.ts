@@ -22,13 +22,16 @@ export function getMemberAnnouncement(id: string) {
   return apiFetch<MemberAnnouncement>(`/member/announcements/${id}`);
 }
 
-export function listAdminAnnouncements() {
-  return apiFetch<AdminAnnouncement[]>("/admin/announcements");
+export function listAdminAnnouncements(scope: "admin" | "regional" = "admin") {
+  return apiFetch<AdminAnnouncement[]>(`/${scope}/announcements`);
 }
 
-export function createAnnouncement(input: AnnouncementInput) {
+export function createAnnouncement(
+  input: AnnouncementInput,
+  scope: "admin" | "regional" = "admin",
+) {
   return apiFetch<{ message: string; announcement: AdminAnnouncement }>(
-    "/admin/announcements",
+    `/${scope}/announcements`,
     {
       method: "POST",
       body: JSON.stringify(input),
@@ -39,9 +42,10 @@ export function createAnnouncement(input: AnnouncementInput) {
 export function updateAnnouncement(
   id: string,
   input: Partial<AnnouncementInput>,
+  scope: "admin" | "regional" = "admin",
 ) {
   return apiFetch<{ message: string; announcement: AdminAnnouncement }>(
-    `/admin/announcements/${id}`,
+    `/${scope}/announcements/${id}`,
     {
       method: "PATCH",
       body: JSON.stringify(input),
@@ -49,9 +53,13 @@ export function updateAnnouncement(
   );
 }
 
-export function setAnnouncementPublished(id: string, isPublished: boolean) {
+export function setAnnouncementPublished(
+  id: string,
+  isPublished: boolean,
+  scope: "admin" | "regional" = "admin",
+) {
   return apiFetch<{ message: string; announcement: AdminAnnouncement }>(
-    `/admin/announcements/${id}/publish`,
+    `/${scope}/announcements/${id}/publish`,
     {
       method: "PATCH",
       body: JSON.stringify({ isPublished }),
@@ -69,8 +77,11 @@ export function setAnnouncementPinned(id: string, isPinned: boolean) {
   );
 }
 
-export function deleteAnnouncement(id: string) {
-  return apiFetch<{ message: string }>(`/admin/announcements/${id}`, {
+export function deleteAnnouncement(
+  id: string,
+  scope: "admin" | "regional" = "admin",
+) {
+  return apiFetch<{ message: string }>(`/${scope}/announcements/${id}`, {
     method: "DELETE",
   });
 }

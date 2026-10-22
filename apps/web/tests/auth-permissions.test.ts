@@ -6,6 +6,26 @@ describe("authentication permissions", () => {
     expect(canAccessRole("ChapterOfficer")).toBe(true);
   });
 
+  it("allows faculty member pages while keeping official chapter and admin routes restricted", () => {
+    expect(canAccessRole("FacultyRepresentative")).toBe(true);
+    expect(canAccessRole("FacultyRepresentative", ["ChapterOfficer"])).toBe(
+      false,
+    );
+    expect(
+      canAccessRole("FacultyRepresentative", [
+        "RegionalAdmin",
+        "RegionalOfficer",
+      ]),
+    ).toBe(false);
+    expect(
+      canAccessRole("FacultyRepresentative", [
+        "ChapterOfficer",
+        "FacultyRepresentative",
+        "RegionalOfficer",
+      ]),
+    ).toBe(true);
+  });
+
   it("allows a RegionalAdmin into RegionalAdmin routes", () => {
     expect(canAccessRole("RegionalAdmin", ["RegionalAdmin"])).toBe(true);
   });

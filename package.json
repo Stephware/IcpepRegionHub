@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "test:e2e": "npm run test:e2e --workspace @icpep-region3-hub/api",
     "db:push": "npm run db:push --workspace @icpep-region3-hub/api",
+    "db:upgrade": "npm run db:upgrade --workspace @icpep-region3-hub/api",
     "db:setup": "npm run db:setup --workspace @icpep-region3-hub/api",
     "db:seed:demo": "npm run db:seed:demo --workspace @icpep-region3-hub/api"
   },

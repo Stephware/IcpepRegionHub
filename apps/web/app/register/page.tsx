@@ -7,7 +7,7 @@ export default function RegisterPage() {
         ICpEP Region 3 Hub
       </p>
       <h1 className="mt-3 text-3xl font-semibold text-slate-950">
-        Register chapter officer
+        Create your account
       </h1>
       <p className="mt-3 text-sm leading-6 text-slate-600">
         New accounts remain pending until a Regional Admin approves them.

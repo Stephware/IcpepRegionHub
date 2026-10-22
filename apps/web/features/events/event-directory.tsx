@@ -11,6 +11,7 @@ import { buildCalendarMonth } from "./calendar";
 import { listPublicEvents } from "./api";
 import {
   eventOrganizerLabel,
+  eventScopeLabel,
   formatEventDateTime,
   formatEventDay,
 } from "./format";
@@ -93,7 +94,11 @@ export function EventDirectory() {
 
   function changeMonth(offset: number) {
     setMonth((current) => {
-      const next = new Date(current.getFullYear(), current.getMonth() + offset, 1);
+      const next = new Date(
+        current.getFullYear(),
+        current.getMonth() + offset,
+        1,
+      );
       return next;
     });
   }
@@ -116,7 +121,11 @@ export function EventDirectory() {
 
   return (
     <div className="mt-8">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Event view">
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Event view"
+      >
         <Button
           onClick={() => setView("list")}
           variant={view === "list" ? "primary" : "secondary"}
@@ -141,7 +150,11 @@ export function EventDirectory() {
       ) : view === "calendar" ? (
         <Card className="mt-6 overflow-hidden">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4">
-            <Button onClick={() => changeMonth(-1)} size="sm" variant="secondary">
+            <Button
+              onClick={() => changeMonth(-1)}
+              size="sm"
+              variant="secondary"
+            >
               Previous
             </Button>
             <h2 className="text-center font-semibold text-slate-950">
@@ -150,7 +163,11 @@ export function EventDirectory() {
                 year: "numeric",
               }).format(month)}
             </h2>
-            <Button onClick={() => changeMonth(1)} size="sm" variant="secondary">
+            <Button
+              onClick={() => changeMonth(1)}
+              size="sm"
+              variant="secondary"
+            >
               Next
             </Button>
           </div>
@@ -261,14 +278,17 @@ function EventCard({ event }: { event: EventItem }) {
           />
         ) : (
           <div className="flex h-32 items-center justify-center bg-blue-50 text-sm font-semibold text-blue-700">
-            ICpEP Region 3 Event
+            {eventScopeLabel(event.scope)}
           </div>
         )}
 
         <div className="p-5">
           <div className="flex flex-wrap gap-2">
-            <Badge variant={eventBadgeVariant(event.status)}>{event.status}</Badge>
+            <Badge variant={eventBadgeVariant(event.status)}>
+              {event.status}
+            </Badge>
             <Badge variant="teal">{event.eventType}</Badge>
+            <Badge variant="neutral">{eventScopeLabel(event.scope)}</Badge>
           </div>
 
           <h3 className="mt-3 text-lg font-semibold text-slate-950">
@@ -278,7 +298,7 @@ function EventCard({ event }: { event: EventItem }) {
             {formatEventDateTime(event.startDateTime)}
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            {eventOrganizerLabel(event.organizer)}
+            {eventOrganizerLabel(event.organizer, event.scope)}
           </p>
           {event.venue ? (
             <p className="mt-2 text-sm text-slate-500">{event.venue}</p>

@@ -1,7 +1,9 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import { AnnouncementsService } from "./announcements.service.js";
+
+const admin = { userId: "1", role: "RegionalAdmin" };
 
 const creator = {
   userId: 1n,
@@ -29,6 +31,10 @@ const announcement = {
 
 function createService() {
   const prisma = {
+    contentAction: { create: jest.fn().mockResolvedValue({}) },
+    $transaction: jest.fn(async (actions: Promise<unknown>[]) =>
+      Promise.all(actions),
+    ),
     announcement: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -46,6 +52,79 @@ function createService() {
 }
 
 describe("AnnouncementsService", () => {
+  const officer = { userId: "2", role: "RegionalOfficer" };
+
+  it("limits regional officers' management list and detail to their own content", async () => {
+    const { prisma, service } = createService();
+    prisma.announcement.findMany.mockResolvedValue([]);
+    await service.listAdminAnnouncements(officer);
+    expect(prisma.announcement.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { createdByUserId: 2n } }),
+    );
+    prisma.announcement.findUnique.mockResolvedValue(announcement);
+    await expect(
+      service.getAdminAnnouncement(10n, officer),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("allows admins to moderate another author's content", async () => {
+    const { prisma, service } = createService();
+    prisma.announcement.findUnique.mockResolvedValue({
+      ...announcement,
+      createdByUserId: 2n,
+    });
+    prisma.announcement.update.mockResolvedValue({
+      ...announcement,
+      isPublished: false,
+    });
+    expect(
+      (await service.setPublished(10n, false, admin)).announcement.isPublished,
+    ).toBe(false);
+    expect(prisma.contentAction.create).toHaveBeenCalledWith({
+      data: {
+        resource: "Announcement",
+        resourceId: 10n,
+        action: "Unpublished",
+        actorUserId: 1n,
+      },
+    });
+  });
+
+  it("does not let regional officers edit, publish, pin or delete another author's announcement", async () => {
+    const { prisma, service } = createService();
+    prisma.announcement.findUnique.mockResolvedValue(announcement);
+    prisma.announcement.update.mockResolvedValue(announcement);
+    prisma.announcement.delete.mockResolvedValue(announcement);
+    for (const operation of [
+      () => service.updateAnnouncement(10n, { title: "Forged edit" }, officer),
+      () => service.setPublished(10n, true, officer),
+      () => service.setPinned(10n, true, officer),
+      () => service.deleteAnnouncement(10n, officer),
+    ]) {
+      await expect(operation()).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    expect(prisma.announcement.update).not.toHaveBeenCalled();
+    expect(prisma.announcement.delete).not.toHaveBeenCalled();
+  });
+
+  it("records an authorized publication and its actor in the transaction", async () => {
+    const { prisma, service } = createService();
+    prisma.announcement.findUnique.mockResolvedValue({
+      ...announcement,
+      createdByUserId: 2n,
+    });
+    prisma.announcement.update.mockResolvedValue(announcement);
+    await service.setPublished(10n, true, officer);
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.contentAction.create).toHaveBeenCalledWith({
+      data: {
+        resource: "Announcement",
+        resourceId: 10n,
+        action: "Published",
+        actorUserId: 2n,
+      },
+    });
+  });
   it("lists only published public announcements that are not expired", async () => {
     const { prisma, service } = createService();
     prisma.announcement.findMany.mockResolvedValue([announcement]);
@@ -110,7 +189,7 @@ describe("AnnouncementsService", () => {
       publishedAt: null,
     });
 
-    await expect(service.setPinned(10n, true)).rejects.toBeInstanceOf(
+    await expect(service.setPinned(10n, true, admin)).rejects.toBeInstanceOf(
       BadRequestException,
     );
     expect(prisma.announcement.update).not.toHaveBeenCalled();
@@ -118,14 +197,17 @@ describe("AnnouncementsService", () => {
 
   it("unpublishes and unpins an announcement so drafts cannot stay pinned", async () => {
     const { prisma, service } = createService();
-    prisma.announcement.findUnique.mockResolvedValue({ ...announcement, isPinned: true });
+    prisma.announcement.findUnique.mockResolvedValue({
+      ...announcement,
+      isPinned: true,
+    });
     prisma.announcement.update.mockResolvedValue({
       ...announcement,
       isPublished: false,
       publishedAt: null,
     });
 
-    const result = await service.setPublished(10n, false);
+    const result = await service.setPublished(10n, false, admin);
 
     expect(prisma.announcement.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -146,7 +228,7 @@ describe("AnnouncementsService", () => {
     });
     prisma.announcement.delete.mockResolvedValue(announcement);
 
-    const result = await service.deleteAnnouncement(10n);
+    const result = await service.deleteAnnouncement(10n, admin);
 
     expect(prisma.announcement.delete).toHaveBeenCalledWith({
       where: { announcementId: 10n },
@@ -157,33 +239,66 @@ describe("AnnouncementsService", () => {
   it("edits content and member visibility", async () => {
     const { prisma, service } = createService();
     prisma.announcement.findUnique.mockResolvedValue(announcement);
-    prisma.announcement.update.mockImplementation(async ({ data }) => ({ ...announcement, ...data }));
-    const result = await service.updateAnnouncement(10n, {
-      title: " Updated ", content: " New content ", visibility: "MembersOnly",
+    prisma.announcement.update.mockImplementation(async ({ data }) => ({
+      ...announcement,
+      ...data,
+    }));
+    const result = await service.updateAnnouncement(
+      10n,
+      {
+        title: " Updated ",
+        content: " New content ",
+        visibility: "MembersOnly",
+      },
+      admin,
+    );
+    expect(result.announcement).toMatchObject({
+      title: "Updated",
+      content: "New content",
+      visibility: "MembersOnly",
     });
-    expect(result.announcement).toMatchObject({ title: "Updated", content: "New content", visibility: "MembersOnly" });
   });
 
-  it.each([true, false])("sets a published announcement pin to %s", async (isPinned) => {
-    const { prisma, service } = createService();
-    prisma.announcement.findUnique.mockResolvedValue(announcement);
-    prisma.announcement.update.mockImplementation(async ({ data }) => ({ ...announcement, ...data }));
-    expect((await service.setPinned(10n, isPinned)).announcement.isPinned).toBe(isPinned);
-  });
+  it.each([true, false])(
+    "sets a published announcement pin to %s",
+    async (isPinned) => {
+      const { prisma, service } = createService();
+      prisma.announcement.findUnique.mockResolvedValue(announcement);
+      prisma.announcement.update.mockImplementation(async ({ data }) => ({
+        ...announcement,
+        ...data,
+      }));
+      expect(
+        (await service.setPinned(10n, isPinned, admin)).announcement.isPinned,
+      ).toBe(isPinned);
+    },
+  );
 
   it("publishes a draft with its first publication date", async () => {
     const { prisma, service } = createService();
-    prisma.announcement.findUnique.mockResolvedValue({ ...announcement, isPublished: false, publishedAt: null });
-    prisma.announcement.update.mockImplementation(async ({ data }) => ({ ...announcement, ...data }));
-    const result = await service.setPublished(10n, true);
+    prisma.announcement.findUnique.mockResolvedValue({
+      ...announcement,
+      isPublished: false,
+      publishedAt: null,
+    });
+    prisma.announcement.update.mockImplementation(async ({ data }) => ({
+      ...announcement,
+      ...data,
+    }));
+    const result = await service.setPublished(10n, true, admin);
     expect(result.announcement.isPublished).toBe(true);
     expect(result.announcement.publishedAt).toBeInstanceOf(Date);
   });
 
   it("does not publish an expired announcement", async () => {
     const { prisma, service } = createService();
-    prisma.announcement.findUnique.mockResolvedValue({ ...announcement, expiresAt: new Date("2000-01-01") });
-    await expect(service.setPublished(10n, true)).rejects.toBeInstanceOf(BadRequestException);
+    prisma.announcement.findUnique.mockResolvedValue({
+      ...announcement,
+      expiresAt: new Date("2000-01-01"),
+    });
+    await expect(service.setPublished(10n, true, admin)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(prisma.announcement.update).not.toHaveBeenCalled();
   });
 });

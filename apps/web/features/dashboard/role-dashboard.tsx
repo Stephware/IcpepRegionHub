@@ -6,7 +6,10 @@ import { Alert, LoadingState } from "@/components/ui/feedback";
 import { HubIcon, type HubIconName } from "@/components/landing/hub-icon";
 import { useAuth } from "@/features/auth/auth-context";
 import { formatAnnouncementDate } from "@/features/announcements/format";
-import { assistancePriorityClass, assistanceStatusClass } from "@/features/assistance/format";
+import {
+  assistancePriorityClass,
+  assistanceStatusClass,
+} from "@/features/assistance/format";
 import { collaborationChapterLabel } from "@/features/collaborations/format";
 import { formatEventDateTime } from "@/features/events/format";
 import { loadDashboard } from "./api";
@@ -66,9 +69,7 @@ export function RoleDashboard() {
   }
 
   if (loading) {
-    return (
-      <LoadingState label="Loading your dashboard..." />
-    );
+    return <LoadingState label="Loading your dashboard..." />;
   }
 
   if (error || !dashboard) {
@@ -89,6 +90,19 @@ export function RoleDashboard() {
           role="ChapterOfficer"
         />
         <ChapterOfficerDashboard data={dashboard.data} />
+      </>
+    );
+  }
+
+  if (dashboard.role === "FacultyRepresentative") {
+    return (
+      <>
+        <DashboardWelcome
+          chapterName={dashboard.data.chapter?.schoolName}
+          firstName={user.firstName}
+          role="FacultyRepresentative"
+        />
+        <FacultyDashboard data={dashboard.data} />
       </>
     );
   }
@@ -119,7 +133,11 @@ function DashboardWelcome({
   chapterName,
 }: {
   firstName: string;
-  role: "ChapterOfficer" | "RegionalOfficer" | "RegionalAdmin";
+  role:
+    | "ChapterOfficer"
+    | "FacultyRepresentative"
+    | "RegionalOfficer"
+    | "RegionalAdmin";
   chapterName?: string;
 }) {
   const roleLabel =
@@ -127,13 +145,17 @@ function DashboardWelcome({
       ? "Regional Admin"
       : role === "RegionalOfficer"
         ? "Regional Officer"
-        : "Chapter Officer";
+        : role === "FacultyRepresentative"
+          ? "Faculty Representative"
+          : "Chapter Officer";
   const description =
     role === "RegionalAdmin"
       ? "Manage Region 3 accounts, chapters, official content, assistance, and collaboration moderation."
       : role === "RegionalOfficer"
         ? "Coordinate regional assistance requests and keep track of activity across Region 3."
-        : "Manage your chapter's assistance and collaboration activity while staying updated on Region 3.";
+        : role === "FacultyRepresentative"
+          ? "Publish academic opportunities for your institution and stay connected with Region 3."
+          : "Manage your chapter's assistance and collaboration activity while staying updated on Region 3.";
 
   return (
     <section className="overflow-hidden rounded-2xl bg-[linear-gradient(115deg,#032b82_0%,#075ed8_58%,#0b8ee8_100%)] px-6 py-7 text-white shadow-sm sm:px-8 sm:py-8">
@@ -162,6 +184,65 @@ function DashboardWelcome({
   );
 }
 
+function FacultyDashboard({
+  data,
+}: {
+  data: Extract<DashboardData, { role: "FacultyRepresentative" }>["data"];
+}) {
+  return (
+    <div className="mt-8 space-y-8">
+      <section className="grid gap-4 sm:grid-cols-2">
+        <Metric
+          href="/events"
+          label="Upcoming events"
+          value={upcomingEventCount(data.events)}
+        />
+        <Metric
+          href="/collaborations"
+          label="Open collaborations"
+          value={data.collaborations.length}
+        />
+      </section>
+      <QuickActions
+        actions={[
+          {
+            href: "/manage/events",
+            label: "Manage academic events",
+            description:
+              "Save drafts and publish academic opportunities for your institution.",
+            icon: "calendar",
+          },
+          {
+            href: "/collaborations",
+            label: "Browse collaborations",
+            description: "Explore opportunities shared by chapters.",
+            icon: "collaboration",
+          },
+          ...(data.chapter
+            ? [
+                {
+                  href: `/chapters/${data.chapter.chapterId}`,
+                  label: "View affiliated institution",
+                  description: "See your institution's chapter profile.",
+                  icon: "chapters" as const,
+                },
+              ]
+            : []),
+        ]}
+      />
+      <div className="grid gap-6 xl:grid-cols-2">
+        <AnnouncementPanel
+          announcements={recentAnnouncements(data.announcements)}
+        />
+        <EventPanel events={upcomingEvents(data.events)} />
+        <CollaborationPanel
+          collaborations={recentCollaborations(data.collaborations)}
+        />
+      </div>
+    </div>
+  );
+}
+
 function ChapterOfficerDashboard({
   data,
 }: {
@@ -172,7 +253,10 @@ function ChapterOfficerDashboard({
     [data.announcements],
   );
   const events = useMemo(() => upcomingEvents(data.events), [data.events]);
-  const eventCount = useMemo(() => upcomingEventCount(data.events), [data.events]);
+  const eventCount = useMemo(
+    () => upcomingEventCount(data.events),
+    [data.events],
+  );
   const collaborations = useMemo(
     () => recentCollaborations(data.collaborations),
     [data.collaborations],
@@ -214,14 +298,39 @@ function ChapterOfficerDashboard({
 
       <NeedsAttention
         items={[
-          { href: "/assistance", label: "Open chapter assistance requests", value: openRequests },
-          { href: "/collaborations", label: "Your active collaboration posts", value: ownOpenCollaborations },
-          { href: "/events", label: "Upcoming and ongoing events", value: eventCount },
+          {
+            href: "/assistance",
+            label: "Open chapter assistance requests",
+            value: openRequests,
+          },
+          {
+            href: "/collaborations",
+            label: "Your active collaboration posts",
+            value: ownOpenCollaborations,
+          },
+          {
+            href: "/events",
+            label: "Upcoming and ongoing events",
+            value: eventCount,
+          },
         ]}
       />
 
       <QuickActions
         actions={[
+          {
+            href: "/manage/events",
+            label: "Manage chapter events",
+            description: "Save drafts and publish events for your chapter.",
+            icon: "calendar",
+          },
+          {
+            href: "/chapter/profile",
+            label: "Edit chapter contacts",
+            description:
+              "Update your chapter's email, contact number, and social link.",
+            icon: "chapters",
+          },
           {
             href: "/assistance",
             label: "Submit assistance request",
@@ -240,12 +349,17 @@ function ChapterOfficerDashboard({
             description: "Find open opportunities from other chapters.",
             icon: "collaboration",
           },
-          ...(data.chapter ? [{
-            href: `/chapters/${data.chapter.chapterId}`,
-            label: "View chapter profile",
-            description: "See your chapter identity and current officers.",
-            icon: "chapters" as const,
-          }] : []),
+          ...(data.chapter
+            ? [
+                {
+                  href: `/chapters/${data.chapter.chapterId}`,
+                  label: "View chapter profile",
+                  description:
+                    "See your chapter identity and current officers.",
+                  icon: "chapters" as const,
+                },
+              ]
+            : []),
           {
             href: "/events",
             label: "View events",
@@ -303,14 +417,39 @@ function RegionalOfficerDashboard({
 
       <NeedsAttention
         items={[
-          { href: "/regional/assistance", label: "Urgent open requests", value: urgent },
-          { href: "/regional/assistance", label: "Unassigned open requests", value: unassigned },
-          { href: "/regional/assistance", label: "Open requests assigned to you", value: assigned },
+          {
+            href: "/regional/assistance",
+            label: "Urgent open requests",
+            value: urgent,
+          },
+          {
+            href: "/regional/assistance",
+            label: "Unassigned open requests",
+            value: unassigned,
+          },
+          {
+            href: "/regional/assistance",
+            label: "Open requests assigned to you",
+            value: assigned,
+          },
         ]}
       />
 
       <QuickActions
         actions={[
+          {
+            href: "/manage/events",
+            label: "Manage regional events",
+            description:
+              "Save drafts and publish your official regional events.",
+            icon: "calendar",
+          },
+          {
+            href: "/regional/announcements",
+            label: "Manage announcements",
+            description: "Publish and update your regional announcements.",
+            icon: "announcement",
+          },
           {
             href: "/regional/assistance",
             label: "Manage assistance requests",
@@ -378,12 +517,32 @@ function RegionalAdminDashboard({
 
       <NeedsAttention
         items={[
-          { href: "/admin/accounts", label: "Accounts awaiting review", value: data.pendingAccounts.length },
-          { href: "/admin/announcements", label: "Announcement drafts", value: draftAnnouncements },
+          {
+            href: "/admin/accounts",
+            label: "Accounts awaiting review",
+            value: data.pendingAccounts.length,
+          },
+          {
+            href: "/admin/announcements",
+            label: "Announcement drafts",
+            value: draftAnnouncements,
+          },
           { href: "/admin/events", label: "Event drafts", value: draftEvents },
-          { href: "/admin/assistance", label: "Open assistance requests", value: openRequests },
-          { href: "/admin/assistance", label: "Urgent open requests", value: urgent },
-          { href: "/admin/collaborations", label: "Open collaboration posts", value: data.collaborations.length },
+          {
+            href: "/admin/assistance",
+            label: "Open assistance requests",
+            value: openRequests,
+          },
+          {
+            href: "/admin/assistance",
+            label: "Urgent open requests",
+            value: urgent,
+          },
+          {
+            href: "/admin/collaborations",
+            label: "Open collaboration posts",
+            value: data.collaborations.length,
+          },
         ]}
       />
 
@@ -477,7 +636,9 @@ function NeedsAttention({
       </p>
       {activeItems.length ? (
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {activeItems.map((item) => <Metric key={item.label} {...item} />)}
+          {activeItems.map((item) => (
+            <Metric key={item.label} {...item} />
+          ))}
         </div>
       ) : (
         <p className="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-500">
@@ -502,7 +663,9 @@ function Metric({
       <p className="text-sm text-slate-500">{label}</p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <p className="text-3xl font-semibold text-slate-950">{value}</p>
-        {href ? <HubIcon className="h-4 w-4 text-blue-600" name="arrow" /> : null}
+        {href ? (
+          <HubIcon className="h-4 w-4 text-blue-600" name="arrow" />
+        ) : null}
       </div>
     </>
   );
@@ -632,11 +795,7 @@ function AnnouncementPanel({
   );
 }
 
-function EventPanel({
-  events,
-}: {
-  events: ReturnType<typeof upcomingEvents>;
-}) {
+function EventPanel({ events }: { events: ReturnType<typeof upcomingEvents> }) {
   return (
     <Panel href="/events" title="Upcoming events">
       {events.length ? (
@@ -679,7 +838,8 @@ function CollaborationPanel({
             >
               <p className="font-medium text-slate-950">{post.title}</p>
               <p className="mt-1 text-xs text-slate-500">
-                {post.collaborationType} · {collaborationChapterLabel(post.chapter)}
+                {post.collaborationType} ·{" "}
+                {collaborationChapterLabel(post.chapter)}
               </p>
             </Link>
           ))}

@@ -8,12 +8,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { ApiError, apiFetch } from "@/lib/api/client";
-import type {
-  AuthUser,
-  LoginInput,
-  RegisterInput,
-} from "./types";
+import { ApiError, apiFetch, clearApiCache } from "@/lib/api/client";
+import type { AuthUser, LoginInput, RegisterInput } from "./types";
 
 type RegisterResult = {
   message: string;
@@ -36,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
+    clearApiCache();
     try {
       const currentUser = await apiFetch<AuthUser>("/auth/me");
       setUser(currentUser);

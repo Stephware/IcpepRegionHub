@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
-import type { UserRole } from "@/features/auth/types";
+import type { FacultyDesignation, UserRole } from "@/features/auth/types";
 import type { AdminAccount } from "./types";
 
 export function listAdminAccounts() {
@@ -38,6 +38,7 @@ export function changeAdminAccountRole(
   userId: string,
   role: UserRole,
   chapterId?: string,
+  facultyDesignation?: FacultyDesignation,
 ) {
   return apiFetch<{ message: string; user: AdminAccount }>(
     `/admin/accounts/${userId}/role`,
@@ -45,7 +46,12 @@ export function changeAdminAccountRole(
       method: "PATCH",
       body: JSON.stringify({
         role,
-        chapterId: role === "ChapterOfficer" ? chapterId : undefined,
+        chapterId:
+          role === "ChapterOfficer" || role === "FacultyRepresentative"
+            ? chapterId
+            : undefined,
+        facultyDesignation:
+          role === "FacultyRepresentative" ? facultyDesignation : undefined,
       }),
     },
   );

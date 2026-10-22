@@ -104,6 +104,15 @@ export function buildDemoRecords(
       chapterId: chapters.auf,
       isApproved: false,
     },
+    {
+      userId: ID + 6n,
+      email: "faculty@hub-demo.test",
+      lastName: "Faculty Representative",
+      role: "FacultyRepresentative",
+      chapterId: chapters.auf,
+      facultyDesignation: "Faculty Adviser",
+      isApproved: true,
+    },
   ].map((user) => ({
     ...user,
     firstName: "Demo",
@@ -111,6 +120,7 @@ export function buildDemoRecords(
     isActive: true,
   }));
   const [admin, regional, auf, bulacan] = users;
+  const faculty = users[5];
   const announcements = [
     {
       title: "[DEMO] Region 3 walkthrough welcome",
@@ -155,17 +165,26 @@ export function buildDemoRecords(
     {
       title: "[DEMO] Regional engineering showcase",
       organizerChapterId: null,
+      scope: "Regional",
       isPublished: true,
     },
     {
       title: "[DEMO] AUF peer learning workshop",
       organizerChapterId: chapters.auf,
+      scope: "Chapter",
       isPublished: true,
     },
     {
       title: "[DEMO] Bulacan project exchange draft",
       organizerChapterId: chapters.bulacan,
+      scope: "Chapter",
       isPublished: false,
+    },
+    {
+      title: "[DEMO] Faculty academic research seminar",
+      organizerChapterId: chapters.auf,
+      scope: "Academic",
+      isPublished: true,
     },
   ].map((item, index) => ({
     ...item,
@@ -179,7 +198,8 @@ export function buildDemoRecords(
     registrationDeadline: later(12 + index * 7),
     registrationLink: "https://hub-demo.test/registration",
     status: "Upcoming",
-    createdByUserId: admin.userId,
+    publishedAt: item.isPublished ? now : null,
+    createdByUserId: item.scope === "Academic" ? faculty.userId : admin.userId,
   }));
   const officers = [auf, bulacan].map((user, index) => ({
     chapterOfficerId: ID + 301n + BigInt(index),

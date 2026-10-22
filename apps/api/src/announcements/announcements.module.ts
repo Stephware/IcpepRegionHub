@@ -6,6 +6,7 @@ import { AnnouncementAdminController } from "./announcement-admin.controller.js"
 import { AnnouncementsController } from "./announcements.controller.js";
 import { AnnouncementsService } from "./announcements.service.js";
 import { MemberAnnouncementsController } from "./member-announcements.controller.js";
+import { RegionalAnnouncementsController } from "./regional-announcements.controller.js";
 
 @Module({
   imports: [PrismaModule, AuthModule, UsersModule],
@@ -13,6 +14,7 @@ import { MemberAnnouncementsController } from "./member-announcements.controller
     AnnouncementsController,
     MemberAnnouncementsController,
     AnnouncementAdminController,
+    RegionalAnnouncementsController,
   ],
   providers: [AnnouncementsService],
   exports: [AnnouncementsService],

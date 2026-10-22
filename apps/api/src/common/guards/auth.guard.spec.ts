@@ -51,6 +51,46 @@ function createGuard() {
 }
 
 describe("AuthGuard", () => {
+  it.each(["0", "-1", "1.5", "9223372036854775808", "99999999999999999999999"])(
+    "rejects invalid token subject %s without a database query",
+    async (sub) => {
+      const { guard, tokenService, usersService } = createGuard();
+      tokenService.verify.mockReturnValue({ sub });
+      const { context: executionContext } = context({
+        authorization: "Bearer signed-token",
+      });
+      await expect(guard.canActivate(executionContext)).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+      expect(usersService.findById).not.toHaveBeenCalled();
+    },
+  );
+
+  it("uses the current faculty role and designation on subsequent requests", async () => {
+    const { guard, usersService } = createGuard();
+    usersService.findById.mockResolvedValue({
+      userId: 10n,
+      chapterId: 1n,
+      firstName: "Faculty",
+      lastName: "Member",
+      email: "faculty@example.com",
+      role: UserRole.FacultyRepresentative,
+      facultyDesignation: "Professor",
+      isActive: true,
+      isApproved: true,
+    });
+    const { context: executionContext, request } = context({
+      authorization: "Bearer signed-token",
+    });
+    await expect(guard.canActivate(executionContext)).resolves.toBe(true);
+    expect(request).toHaveProperty(
+      "user",
+      expect.objectContaining({
+        role: UserRole.FacultyRepresentative,
+        facultyDesignation: "Professor",
+      }),
+    );
+  });
   it("accepts a bearer token and attaches the current user", async () => {
     const { guard, tokenService } = createGuard();
     const { context: executionContext, request } = context({

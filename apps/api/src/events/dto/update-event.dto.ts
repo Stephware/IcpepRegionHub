@@ -1,36 +1,42 @@
 import {
   IsISO8601,
+  IsIn,
   IsNumberString,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from "class-validator";
 
 export class UpdateEventDto {
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(250)
   title?: string;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   description?: string;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(100)
   eventType?: string;
+
+  @ValidateIf((_input, value) => value !== undefined)
+  @IsIn(["Regional", "Chapter", "Academic"])
+  scope?: "Regional" | "Chapter" | "Academic";
 
   @IsOptional()
   @IsNumberString()
   organizerChapterId?: string | null;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(300)
   venue?: string;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsISO8601()
   startDateTime?: string;
 
@@ -42,12 +48,12 @@ export class UpdateEventDto {
   @IsISO8601()
   registrationDeadline?: string | null;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(500)
   registrationLink?: string;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(500)
   coverImageUrl?: string;

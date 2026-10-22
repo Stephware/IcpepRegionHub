@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
   Res,
   UseGuards,
@@ -13,6 +14,7 @@ import { AuthService } from "./auth.service.js";
 import { LoginDto } from "./dto/login.dto.js";
 import { RegisterDto } from "./dto/register.dto.js";
 import { SessionTokenService } from "./session-token.service.js";
+import { UpdateProfileDto } from "../users/dto/update-profile.dto.js";
 
 type HeaderResponse = {
   setHeader(name: string, value: string): void;
@@ -63,5 +65,14 @@ export class AuthController {
   @UseGuards(AuthGuard)
   getCurrentUser(@CurrentUser() user: AuthenticatedUser) {
     return user;
+  }
+
+  @Patch("me")
+  @UseGuards(AuthGuard)
+  updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() input: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(BigInt(user.userId), input);
   }
 }

@@ -67,8 +67,11 @@ export function LoginForm() {
       </Button>
 
       <p className="text-center text-sm text-slate-600">
-        Need a chapter-officer account?{" "}
-        <Link className="font-medium text-blue-700 hover:underline" href="/register">
+        Need an account?{" "}
+        <Link
+          className="font-medium text-blue-700 hover:underline"
+          href="/register"
+        >
           Register
         </Link>
       </p>

@@ -28,10 +28,13 @@ const pendingUser = {
 
 function createService() {
   const prisma = {
+    $executeRaw: jest.fn(),
+    $transaction: jest.fn(),
     chapter: {
       findUnique: jest.fn(),
     },
     user: {
+      count: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
       findFirst: jest.fn(),
@@ -39,6 +42,10 @@ function createService() {
       update: jest.fn().mockResolvedValue(pendingUser),
     },
   };
+
+  prisma.$transaction.mockImplementation(async (callback: unknown) =>
+    (callback as (tx: unknown) => unknown)(prisma),
+  );
 
   return {
     prisma,
@@ -55,8 +62,9 @@ describe("UsersService account administration", () => {
     });
 
     await expect(
-      service.createChapterOfficer({
+      service.createRegistrant({
         chapterId: 1n,
+        role: UserRole.ChapterOfficer,
         firstName: "Juan",
         lastName: "Dela Cruz",
         email: "juan@example.com",
@@ -75,8 +83,9 @@ describe("UsersService account administration", () => {
     });
     prisma.user.create.mockResolvedValue(pendingUser);
 
-    const result = await service.createChapterOfficer({
+    const result = await service.createRegistrant({
       chapterId: 1n,
+      role: UserRole.ChapterOfficer,
       firstName: " Juan ",
       lastName: " Dela Cruz ",
       email: " JUAN@EXAMPLE.COM ",
@@ -86,6 +95,7 @@ describe("UsersService account administration", () => {
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         chapterId: 1n,
+        role: UserRole.ChapterOfficer,
         firstName: "Juan",
         lastName: "Dela Cruz",
         email: "juan@example.com",
@@ -155,6 +165,7 @@ describe("UsersService account administration", () => {
       }),
     );
     expect(result.user.isApproved).toBe(true);
+    expect(prisma.$executeRaw).toHaveBeenCalled();
   });
 
   it("rejects a pending account by deactivating it", async () => {
@@ -179,6 +190,7 @@ describe("UsersService account administration", () => {
       }),
     );
     expect(result.user.isActive).toBe(false);
+    expect(prisma.$executeRaw).toHaveBeenCalled();
   });
 
   it("does not reject an already approved account", async () => {
@@ -232,7 +244,7 @@ describe("UsersService account administration", () => {
       expect(prisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { userId: 10n },
-          data: { role, chapterId: null },
+          data: { role, chapterId: null, facultyDesignation: null },
         }),
       );
       expect(result.user.role).toBe(role);
@@ -279,9 +291,99 @@ describe("UsersService account administration", () => {
     const result = await service.changeRole(10n, UserRole.ChapterOfficer, "1");
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { role: UserRole.ChapterOfficer, chapterId: 1n },
+        data: {
+          role: UserRole.ChapterOfficer,
+          chapterId: 1n,
+          facultyDesignation: null,
+        },
       }),
     );
     expect(result.user.chapterId).toBe("1");
+  });
+});
+
+describe("UsersService registration and administrator safeguards", () => {
+  it("maps a concurrent email collision to a conflict", async () => {
+    const { prisma, service } = createService();
+    prisma.chapter.findUnique.mockResolvedValue({ status: "Active" });
+    prisma.user.create.mockRejectedValue({ code: "P2002" });
+    await expect(
+      service.createRegistrant({
+        chapterId: 1n,
+        role: UserRole.ChapterOfficer,
+        firstName: "A",
+        lastName: "B",
+        email: "a@demo.test",
+        passwordHash: "hash",
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("creates pending faculty with a validated designation", async () => {
+    const { prisma, service } = createService();
+    prisma.chapter.findUnique.mockResolvedValue({ status: "Active" });
+    prisma.user.create.mockResolvedValue(pendingUser);
+    await service.createRegistrant({
+      chapterId: 1n,
+      role: UserRole.FacultyRepresentative,
+      facultyDesignation: "Professor",
+      firstName: "A",
+      lastName: "B",
+      email: "a@demo.test",
+      passwordHash: "hash",
+    });
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        role: UserRole.FacultyRepresentative,
+        facultyDesignation: "Professor",
+        isApproved: false,
+      }),
+    });
+  });
+
+  it.each(["deactivate", "demote"])(
+    "blocks the last approved active admin: %s",
+    async (action) => {
+      const { prisma, service } = createService();
+      prisma.user.findUnique.mockResolvedValue({
+        ...pendingUser,
+        role: UserRole.RegionalAdmin,
+        isApproved: true,
+      });
+      prisma.user.count.mockResolvedValue(1);
+      await expect(
+        action === "deactivate"
+          ? service.setActive(10n, false)
+          : service.changeRole(10n, UserRole.RegionalOfficer),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.$executeRaw).toHaveBeenCalled();
+      expect(prisma.user.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("allows removal when another active approved admin remains", async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue({
+      ...pendingUser,
+      role: UserRole.RegionalAdmin,
+      isApproved: true,
+    });
+    prisma.user.count.mockResolvedValue(2);
+    await service.setActive(10n, false);
+    expect(prisma.user.update).toHaveBeenCalled();
+  });
+
+  it("limits self-profile writes and normalizes email", async () => {
+    const { prisma, service } = createService();
+    prisma.user.findUnique.mockResolvedValue(pendingUser);
+    await service.updateProfile(10n, {
+      email: " NEW@DEMO.TEST ",
+      firstName: " New ",
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { email: "new@demo.test", firstName: "New" },
+      }),
+    );
   });
 });

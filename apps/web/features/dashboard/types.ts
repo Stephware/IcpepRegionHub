@@ -26,6 +26,10 @@ export type ChapterOfficerDashboardData = DashboardCommonData & {
   ownCollaborations: CollaborationPost[];
 };
 
+export type FacultyDashboardData = DashboardCommonData & {
+  chapter: Chapter | null;
+};
+
 export type RegionalOfficerDashboardData = DashboardCommonData & {
   assistanceRequests: AssistanceRequestSummary[];
 };
@@ -39,6 +43,10 @@ export type RegionalAdminDashboardData = DashboardCommonData & {
 };
 
 export type DashboardData =
+  | {
+      role: "FacultyRepresentative";
+      data: FacultyDashboardData;
+    }
   | {
       role: "ChapterOfficer";
       data: ChapterOfficerDashboardData;

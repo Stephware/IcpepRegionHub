@@ -16,7 +16,8 @@
     "predb:seed": "npm run prisma:generate",
     "db:seed": "prisma db seed",
     "prisma:generate": "prisma generate",
-    "db:push": "prisma db push && prisma db execute --file prisma/assistance-priority.sql",
+    "db:upgrade": "prisma db execute --file prisma/role-permissions.sql",
+    "db:push": "npm run db:upgrade && prisma db push && npm run db:upgrade && prisma db execute --file prisma/assistance-priority.sql",
     "db:setup": "npm run db:push && npm run db:seed",
     "predb:seed:demo": "npm run prisma:generate",
     "db:seed:demo": "node --loader ts-node/esm prisma/seed-demo.ts"

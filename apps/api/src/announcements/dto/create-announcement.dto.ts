@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from "class-validator";
 
 export class CreateAnnouncementDto {
@@ -18,16 +19,16 @@ export class CreateAnnouncementDto {
   @MaxLength(100)
   category!: string;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsIn(["Public", "MembersOnly"])
   visibility?: "Public" | "MembersOnly";
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(500)
   coverImageUrl?: string;
 
-  @IsOptional()
+  @ValidateIf((_input, value) => value !== undefined)
   @IsString()
   @MaxLength(500)
   externalLink?: string;
