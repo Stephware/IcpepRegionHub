@@ -10,7 +10,7 @@ import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
 import { ListSearch } from "@/components/ui/list-search";
 import { Pagination } from "@/components/ui/pagination";
 import { useSearchPagination } from "@/lib/use-search-pagination";
-import { buildCalendarMonth } from "./calendar";
+import { buildCalendarMonth, visibleCalendarEvents } from "./calendar";
 import { listPublicEvents } from "./api";
 import {
   eventOrganizerLabel,
@@ -61,6 +61,7 @@ export function EventDirectory() {
   const [error, setError] = useState("");
   const [view, setView] = useState<"list" | "calendar">("list");
   const [month, setMonth] = useState(() => new Date());
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +109,7 @@ export function EventDirectory() {
   );
 
   function changeMonth(offset: number) {
+    setExpandedDay(null);
     setMonth((current) => {
       const next = new Date(
         current.getFullYear(),
@@ -234,7 +236,7 @@ export function EventDirectory() {
                       {day.date.getDate()}
                     </div>
                     <div className="mt-2 space-y-1">
-                      {day.events.slice(0, 3).map((event) => (
+                      {visibleCalendarEvents(day.events, expandedDay === day.date.toISOString()).map((event) => (
                         <Link
                           className={`block truncate rounded px-2 py-1 text-xs font-medium ${
                             event.status === "Cancelled"
@@ -249,9 +251,19 @@ export function EventDirectory() {
                         </Link>
                       ))}
                       {day.events.length > 3 ? (
-                        <p className="text-xs text-slate-500">
-                          +{day.events.length - 3} more
-                        </p>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-blue-700"
+                          aria-expanded={expandedDay === day.date.toISOString()}
+                          aria-label={`${expandedDay === day.date.toISOString() ? "Show fewer events" : "Show all events"} for ${day.date.toLocaleDateString("en-PH")}`}
+                          onClick={() => setExpandedDay((current) =>
+                            current === day.date.toISOString() ? null : day.date.toISOString()
+                          )}
+                        >
+                          {expandedDay === day.date.toISOString()
+                            ? "Show fewer"
+                            : `+${day.events.length - 3} more`}
+                        </button>
                       ) : null}
                     </div>
                   </div>
