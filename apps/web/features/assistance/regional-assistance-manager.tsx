@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   addRegionalAssistanceUpdate,
   assignRegionalAssistanceRequest,
@@ -54,6 +57,23 @@ export function RegionalAssistanceManager() {
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const requestList = useSearchPagination(
+    requests,
+    (request) => [
+      request.ticketCode,
+      request.subject,
+      request.category,
+      request.status,
+      request.priority,
+      request.chapter.chapterName,
+      request.chapter.schoolName,
+      request.chapter.acronym,
+      request.submittedBy.firstName,
+      request.submittedBy.lastName,
+      request.assignedTo?.firstName,
+      request.assignedTo?.lastName,
+    ].join(" "),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -150,6 +170,7 @@ export function RegionalAssistanceManager() {
 
     try {
       setRequests(await listRegionalAssistanceRequests(filters));
+      requestList.setPage(1);
     } catch (requestError) {
       showError(requestError, "Unable to filter requests.");
     }
@@ -158,6 +179,7 @@ export function RegionalAssistanceManager() {
   async function clearFilters() {
     const cleared: RegionalAssistanceFilters = {};
     setFilters(cleared);
+    requestList.setQuery("");
     setError("");
     setNotice("");
 
@@ -387,13 +409,20 @@ export function RegionalAssistanceManager() {
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-slate-950">Requests</h2>
             <span className="text-xs text-slate-500">
-              {requests.length} shown
+              {requestList.items.length} of {requestList.total} shown
             </span>
           </div>
+          <ListSearch
+            label="Search regional requests"
+            onQueryChange={requestList.setQuery}
+            placeholder="Search tickets, chapters, or people"
+            query={requestList.query}
+            total={requestList.total}
+          />
 
           <div className="mt-4 max-h-[52rem] space-y-3 overflow-y-auto pr-1">
-            {requests.length ? (
-              requests.map((request) => (
+            {requestList.total ? (
+              requestList.items.map((request) => (
                 <button
                   className={`w-full rounded-lg border p-4 text-left transition ${
                     selected?.assistanceRequestId ===
@@ -439,10 +468,16 @@ export function RegionalAssistanceManager() {
               ))
             ) : (
               <p className="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-600">
-                No requests match the selected filters.
+                No requests match your search or selected filters.
               </p>
             )}
           </div>
+          <Pagination
+            label="Regional requests pagination"
+            onPageChange={requestList.setPage}
+            page={requestList.page}
+            pageCount={requestList.pageCount}
+          />
         </aside>
 
         <section>

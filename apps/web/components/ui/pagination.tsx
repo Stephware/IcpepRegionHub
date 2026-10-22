@@ -4,10 +4,12 @@ export function Pagination({
   page,
   pageCount,
   onPageChange,
+  label = "Pagination",
 }: {
   page: number;
   pageCount: number;
   onPageChange(page: number): void;
+  label?: string;
 }) {
   if (pageCount <= 1) {
     return null;
@@ -15,8 +17,8 @@ export function Pagination({
 
   return (
     <nav
-      aria-label="Pagination"
-      className="mt-6 flex items-center justify-between gap-4"
+      aria-label={label}
+      className="mt-6 flex flex-wrap items-center justify-between gap-3"
     >
       <Button
         disabled={page <= 1}

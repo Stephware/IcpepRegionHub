@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/features/auth/auth-context";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   closeCollaborationPost,
   createCollaborationPost,
@@ -34,6 +37,22 @@ const emptyForm: CollaborationPostInput = {
   contactNumber: "",
   expiresAt: null,
 };
+
+function collaborationSearchText(post: CollaborationPost) {
+  return [
+    post.title,
+    post.description,
+    post.collaborationType,
+    post.status,
+    post.eventName,
+    post.location,
+    post.chapter.chapterName,
+    post.chapter.schoolName,
+    post.chapter.acronym,
+    post.createdBy.firstName,
+    post.createdBy.lastName,
+  ].join(" ");
+}
 
 function toLocalInput(value: string | null) {
   if (!value) {
@@ -124,6 +143,8 @@ export function CollaborationBoard({
         : openPosts,
     [openPosts, typeFilter],
   );
+  const openListing = useSearchPagination(visiblePosts, collaborationSearchText);
+  const myListing = useSearchPagination(myPosts, collaborationSearchText);
 
   function updateField<K extends keyof CollaborationPostInput>(
     field: K,
@@ -306,7 +327,10 @@ export function CollaborationBoard({
             Collaboration type
             <select
               className="mt-2 min-w-56 rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal outline-none focus:border-blue-700"
-              onChange={(event) => setTypeFilter(event.target.value)}
+              onChange={(event) => {
+                setTypeFilter(event.target.value);
+                openListing.setPage(1);
+              }}
               value={typeFilter}
             >
               <option value="">All types</option>
@@ -319,9 +343,19 @@ export function CollaborationBoard({
           </label>
         </div>
 
-        {visiblePosts.length ? (
+        <div className="mt-6">
+          <ListSearch
+            label="Search open collaborations"
+            onQueryChange={openListing.setQuery}
+            placeholder="Search by title, type, chapter, or event"
+            query={openListing.query}
+            total={openListing.total}
+          />
+        </div>
+
+        {openListing.total ? (
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {visiblePosts.map((post) => (
+            {openListing.items.map((post) => (
               <Link
                 className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow"
                 href={`/collaborations/${post.collaborationPostId}`}
@@ -364,14 +398,22 @@ export function CollaborationBoard({
         ) : (
           <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
             <p className="font-medium text-slate-900">
-              No open collaboration posts.
+              {openPosts.length
+                ? "No collaboration posts match your search or type."
+                : "No open collaboration posts."}
             </p>
             <p className="mt-2 text-sm text-slate-600">
-              Try another type or check again when chapters post new
+              Try another search or type, or check again when chapters post new
               opportunities.
             </p>
           </div>
         )}
+        <Pagination
+          label="Open collaborations pagination"
+          onPageChange={openListing.setPage}
+          page={openListing.page}
+          pageCount={openListing.pageCount}
+        />
       </section>
 
       {canManage ? (
@@ -401,9 +443,19 @@ export function CollaborationBoard({
               </button>
             </div>
 
+            <div className="mt-5">
+              <ListSearch
+                label="Search my collaborations"
+                onQueryChange={myListing.setQuery}
+                placeholder="Search by title, type, chapter, or event"
+                query={myListing.query}
+                total={myListing.total}
+              />
+            </div>
+
             <div className="mt-5 space-y-3">
-              {myPosts.length ? (
-                myPosts.map((post) => (
+              {myListing.total ? (
+                myListing.items.map((post) => (
                   <article
                     className={`rounded-xl border bg-white p-4 shadow-sm ${
                       selected?.collaborationPostId === post.collaborationPostId
@@ -472,10 +524,18 @@ export function CollaborationBoard({
                 ))
               ) : (
                 <p className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
-                  You have not created a collaboration post yet.
+                  {myPosts.length
+                    ? "No collaboration posts match your search. Try another title, type, or event."
+                    : "You have not created a collaboration post yet."}
                 </p>
               )}
             </div>
+            <Pagination
+              label="My collaborations pagination"
+              onPageChange={myListing.setPage}
+              page={myListing.page}
+              pageCount={myListing.pageCount}
+            />
           </div>
 
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   createAssistanceRequest,
   listChapterAssistanceRequests,
@@ -32,6 +35,23 @@ export function AssistanceDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const requestList = useSearchPagination(
+    requests,
+    (request) => [
+      request.ticketCode,
+      request.subject,
+      request.category,
+      request.status,
+      request.priority,
+      request.chapter.chapterName,
+      request.chapter.schoolName,
+      request.chapter.acronym,
+      request.submittedBy.firstName,
+      request.submittedBy.lastName,
+      request.assignedTo?.firstName,
+      request.assignedTo?.lastName,
+    ].join(" "),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -204,19 +224,30 @@ export function AssistanceDashboard() {
         <p className="mt-2 text-sm text-slate-600">
           Requests submitted by officers from your chapter appear here.
         </p>
+        <ListSearch
+          label="Search chapter requests"
+          onQueryChange={requestList.setQuery}
+          placeholder="Search tickets, subjects, status, or people"
+          query={requestList.query}
+          total={requestList.total}
+        />
 
         {loading ? (
           <p className="mt-6 text-sm text-slate-600">Loading requests...</p>
-        ) : !requests.length ? (
+        ) : !requestList.total ? (
           <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
-            <p className="font-medium text-slate-900">No requests yet.</p>
+            <p className="font-medium text-slate-900">
+              {requestList.query.trim() ? "No requests match your search." : "No requests yet."}
+            </p>
             <p className="mt-2 text-sm text-slate-600">
-              Submitted assistance tickets for your chapter will appear here.
+              {requestList.query.trim()
+                ? "Try a different ticket, subject, status, or name."
+                : "Submitted assistance tickets for your chapter will appear here."}
             </p>
           </div>
         ) : (
           <div className="mt-6 space-y-4">
-            {requests.map((request) => (
+            {requestList.items.map((request) => (
               <Link
                 className="block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow"
                 href={`/assistance/${request.assistanceRequestId}`}
@@ -257,6 +288,12 @@ export function AssistanceDashboard() {
             ))}
           </div>
         )}
+        <Pagination
+          label="Chapter request history pagination"
+          onPageChange={requestList.setPage}
+          page={requestList.page}
+          pageCount={requestList.pageCount}
+        />
       </section>
     </div>
   );

@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -50,6 +53,18 @@ export function AnnouncementAdminManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const announcementList = useSearchPagination(announcements, (announcement) =>
+    [
+      announcement.title,
+      announcement.content,
+      announcement.category,
+      announcement.visibility === "MembersOnly"
+        ? "Members only"
+        : announcement.visibility,
+      announcement.isPublished ? "Published" : "Draft",
+      announcement.isPinned ? "Pinned" : "",
+    ].join(" "),
+  );
 
   const loadAnnouncements = useCallback(async () => {
     const items = await listAdminAnnouncements(scope);
@@ -228,9 +243,18 @@ export function AnnouncementAdminManager({
           New announcement
         </button>
 
+        <div className="mt-4">
+          <ListSearch
+            label="Search managed announcements"
+            onQueryChange={announcementList.setQuery}
+            placeholder="Title, content, category, or status"
+            query={announcementList.query}
+            total={announcementList.total}
+          />
+        </div>
         <div className="mt-4 space-y-2">
-          {announcements.length ? (
-            announcements.map((announcement) => (
+          {announcementList.items.length ? (
+            announcementList.items.map((announcement) => (
               <button
                 className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                   selected?.announcementId === announcement.announcementId
@@ -267,10 +291,18 @@ export function AnnouncementAdminManager({
             ))
           ) : (
             <p className="py-4 text-sm text-slate-500">
-              No announcements have been created yet.
+              {announcements.length
+                ? "No announcements match your search."
+                : "No announcements have been created yet."}
             </p>
           )}
         </div>
+        <Pagination
+          label="Announcement management pages"
+          onPageChange={announcementList.setPage}
+          page={announcementList.page}
+          pageCount={announcementList.pageCount}
+        />
       </aside>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

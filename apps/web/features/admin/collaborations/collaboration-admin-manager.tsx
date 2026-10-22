@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   deleteAdminCollaborationPost,
   getAdminCollaborationPost,
@@ -67,10 +70,25 @@ export function CollaborationAdminManager() {
 
   const visiblePosts = useMemo(
     () =>
-      filter === "All"
-        ? posts
-        : posts.filter((post) => post.status === filter),
+      filter === "All" ? posts : posts.filter((post) => post.status === filter),
     [filter, posts],
+  );
+  const postList = useSearchPagination(visiblePosts, (post) =>
+    [
+      post.title,
+      post.description,
+      post.collaborationType,
+      post.status,
+      post.eventName,
+      post.location,
+      post.contactName,
+      post.contactEmail,
+      post.chapter?.chapterName,
+      post.chapter?.schoolName,
+      post.chapter?.acronym,
+      post.createdBy.firstName,
+      post.createdBy.lastName,
+    ].join(" "),
   );
 
   async function refresh() {
@@ -163,7 +181,10 @@ export function CollaborationAdminManager() {
                 : "border border-slate-300 bg-white text-slate-700"
             }`}
             key={item}
-            onClick={() => setFilter(item)}
+            onClick={() => {
+              setFilter(item);
+              postList.setPage(1);
+            }}
             type="button"
           >
             {item}
@@ -179,9 +200,18 @@ export function CollaborationAdminManager() {
           <p className="text-sm font-medium text-slate-900">
             Collaboration posts
           </p>
-          <div className="mt-4 max-h-[48rem] space-y-2 overflow-y-auto">
-            {visiblePosts.length ? (
-              visiblePosts.map((post) => (
+          <div className="mt-4">
+            <ListSearch
+              label="Search collaboration posts"
+              onQueryChange={postList.setQuery}
+              placeholder="Title, chapter, type, or status"
+              query={postList.query}
+              total={postList.total}
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            {postList.items.length ? (
+              postList.items.map((post) => (
                 <button
                   className={`w-full rounded-lg border p-3 text-left ${
                     selected?.collaborationPostId === post.collaborationPostId
@@ -214,10 +244,16 @@ export function CollaborationAdminManager() {
               ))
             ) : (
               <p className="py-4 text-sm text-slate-500">
-                No collaboration posts match this filter.
+                No collaboration posts match your search and filters.
               </p>
             )}
           </div>
+          <Pagination
+            label="Collaboration moderation pages"
+            onPageChange={postList.setPage}
+            page={postList.page}
+            pageCount={postList.pageCount}
+          />
         </aside>
 
         <section>
@@ -259,7 +295,9 @@ export function CollaborationAdminManager() {
                         onClick={() => void toggleStatus(selected)}
                         type="button"
                       >
-                        {selected.status === "Open" ? "Close post" : "Reopen post"}
+                        {selected.status === "Open"
+                          ? "Close post"
+                          : "Reopen post"}
                       </button>
                     ) : null}
                     <Button
@@ -277,10 +315,22 @@ export function CollaborationAdminManager() {
                 </p>
 
                 <dl className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <Info label="Created by" value={`${selected.createdBy.firstName} ${selected.createdBy.lastName}`} />
-                  <Info label="Responses" value={String(selected.responseCount)} />
-                  <Info label="Location" value={selected.location ?? "Not specified"} />
-                  <Info label="Expires" value={formatCollaborationDate(selected.expiresAt)} />
+                  <Info
+                    label="Created by"
+                    value={`${selected.createdBy.firstName} ${selected.createdBy.lastName}`}
+                  />
+                  <Info
+                    label="Responses"
+                    value={String(selected.responseCount)}
+                  />
+                  <Info
+                    label="Location"
+                    value={selected.location ?? "Not specified"}
+                  />
+                  <Info
+                    label="Expires"
+                    value={formatCollaborationDate(selected.expiresAt)}
+                  />
                 </dl>
               </article>
 
@@ -301,8 +351,8 @@ export function CollaborationAdminManager() {
                               {collaborationChapterLabel(response.chapter)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              {response.user.firstName} {response.user.lastName} ·{" "}
-                              {response.user.email}
+                              {response.user.firstName} {response.user.lastName}{" "}
+                              · {response.user.email}
                             </p>
                           </div>
                           <span

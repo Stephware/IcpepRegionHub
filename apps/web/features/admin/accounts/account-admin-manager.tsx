@@ -12,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/form-controls";
 import { TableContainer } from "@/components/ui/table";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   approveAdminAccount,
   changeAdminAccountRole,
@@ -101,6 +104,23 @@ export function AccountAdminManager() {
     () => filterAdminAccounts(accounts, filter),
     [accounts, filter],
   );
+  const accountList = useSearchPagination(
+    visibleAccounts,
+    (account) =>
+      [
+        account.firstName,
+        account.lastName,
+        account.email,
+        account.role.replace(/([a-z])([A-Z])/g, "$1 $2"),
+        account.facultyDesignation,
+        account.chapter?.schoolName,
+        account.chapter?.chapterName,
+        account.chapter?.acronym,
+        account.chapter ? "" : "Regional",
+        accountState(account),
+      ].join(" "),
+    10,
+  );
 
   async function refresh() {
     setAccounts(await listAdminAccounts());
@@ -148,7 +168,10 @@ export function AccountAdminManager() {
         {filters.map((item) => (
           <Button
             key={item}
-            onClick={() => setFilter(item)}
+            onClick={() => {
+              setFilter(item);
+              accountList.setPage(1);
+            }}
             size="sm"
             variant={filter === item ? "primary" : "secondary"}
           >
@@ -166,7 +189,15 @@ export function AccountAdminManager() {
       {error ? <Alert tone="error">{error}</Alert> : null}
       {notice ? <Alert tone="success">{notice}</Alert> : null}
 
-      {visibleAccounts.length ? (
+      <ListSearch
+        label="Search accounts"
+        onQueryChange={accountList.setQuery}
+        placeholder="Name, email, institution, or role"
+        query={accountList.query}
+        total={accountList.total}
+      />
+
+      {accountList.items.length ? (
         <TableContainer>
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -179,7 +210,7 @@ export function AccountAdminManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {visibleAccounts.map((account) => {
+              {accountList.items.map((account) => {
                 const state = accountState(account);
                 const busy = actionId === account.userId;
 
@@ -380,10 +411,16 @@ export function AccountAdminManager() {
         </TableContainer>
       ) : (
         <EmptyState
-          description="Try another account-state filter."
-          title="No accounts match this filter."
+          description="Try another search or account-state filter."
+          title="No accounts match your search and filters."
         />
       )}
+      <Pagination
+        label="Account pages"
+        onPageChange={accountList.setPage}
+        page={accountList.page}
+        pageCount={accountList.pageCount}
+      />
     </div>
   );
 }

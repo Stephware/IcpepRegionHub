@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, EmptyState, LoadingState } from "@/components/ui/feedback";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import { buildCalendarMonth } from "./calendar";
 import { listPublicEvents } from "./api";
 import {
@@ -18,6 +21,23 @@ import {
 import type { EventItem } from "./types";
 
 const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function eventSearchText(event: EventItem) {
+  return [
+    event.title,
+    event.description,
+    event.eventType,
+    event.status,
+    event.scope,
+    event.venue,
+    eventOrganizerLabel(event.organizer, event.scope),
+    event.organizer?.chapterName,
+    event.organizer?.schoolName,
+    event.organizer?.acronym,
+    event.createdBy.firstName,
+    event.createdBy.lastName,
+  ].join(" ");
+}
 
 function eventBadgeVariant(status: EventItem["status"]) {
   if (status === "Cancelled") {
@@ -71,25 +91,20 @@ export function EventDirectory() {
     };
   }, []);
 
+  const orderedEvents = useMemo(
+    () => [
+      ...events.filter((event) => event.status !== "Completed"),
+      ...events.filter((event) => event.status === "Completed"),
+    ],
+    [events],
+  );
+  const listing = useSearchPagination(orderedEvents, eventSearchText);
+  const upcoming = listing.items.filter((event) => event.status !== "Completed");
+  const completed = listing.items.filter((event) => event.status === "Completed");
+
   const calendarDays = useMemo(
-    () => buildCalendarMonth(month, events),
-    [events, month],
-  );
-
-  const upcoming = useMemo(
-    () =>
-      events.filter(
-        (event) =>
-          event.status === "Upcoming" ||
-          event.status === "Ongoing" ||
-          event.status === "Cancelled",
-      ),
-    [events],
-  );
-
-  const completed = useMemo(
-    () => events.filter((event) => event.status === "Completed"),
-    [events],
+    () => buildCalendarMonth(month, listing.filteredItems),
+    [listing.filteredItems, month],
   );
 
   function changeMonth(offset: number) {
@@ -140,11 +155,29 @@ export function EventDirectory() {
         </Button>
       </div>
 
-      {!events.length ? (
+      <div className="mt-6">
+        <ListSearch
+          label="Search events"
+          onQueryChange={listing.setQuery}
+          placeholder="Search by title, type, organizer, or venue"
+          query={listing.query}
+          total={listing.total}
+        />
+      </div>
+
+      {!listing.total ? (
         <div className="mt-6">
           <EmptyState
-            description="Upcoming Region 3 and chapter events will appear here."
-            title="No published events yet."
+            description={
+              events.length
+                ? "Try another title, type, organizer, or venue."
+                : "Upcoming Region 3 and chapter events will appear here."
+            }
+            title={
+              events.length
+                ? "No events match your search."
+                : "No published events yet."
+            }
           />
         </div>
       ) : view === "calendar" ? (
@@ -229,22 +262,18 @@ export function EventDirectory() {
         </Card>
       ) : (
         <div className="mt-6 space-y-8">
-          <section>
-            <h2 className="text-xl font-semibold text-slate-950">
-              Upcoming & current events
-            </h2>
-            {upcoming.length ? (
+          {upcoming.length ? (
+            <section>
+              <h2 className="text-xl font-semibold text-slate-950">
+                Upcoming & current events
+              </h2>
               <div className="mt-4 grid gap-5 md:grid-cols-2">
                 {upcoming.map((event) => (
                   <EventCard event={event} key={event.eventId} />
                 ))}
               </div>
-            ) : (
-              <div className="mt-4">
-                <EmptyState title="No upcoming events are currently published." />
-              </div>
-            )}
-          </section>
+            </section>
+          ) : null}
 
           {completed.length ? (
             <section>
@@ -258,6 +287,12 @@ export function EventDirectory() {
               </div>
             </section>
           ) : null}
+          <Pagination
+            label="Events pagination"
+            onPageChange={listing.setPage}
+            page={listing.page}
+            pageCount={listing.pageCount}
+          />
         </div>
       )}
     </div>

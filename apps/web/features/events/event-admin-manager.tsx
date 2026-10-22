@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import { useAuth } from "@/features/auth/auth-context";
 import { listPublicChapters } from "@/features/chapters/api";
 import type { Chapter } from "@/features/chapters/types";
@@ -75,6 +78,21 @@ export function EventAdminManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const eventList = useSearchPagination(events, (event) =>
+    [
+      event.title,
+      event.description,
+      event.eventType,
+      event.venue,
+      event.scope,
+      event.status,
+      event.editorialState,
+      eventOrganizerLabel(event.organizer, event.scope),
+      event.organizer?.schoolName,
+      event.organizer?.chapterName,
+      event.organizer?.acronym,
+    ].join(" "),
+  );
 
   const loadEvents = useCallback(async () => {
     if (createOnly) return [];
@@ -268,9 +286,18 @@ export function EventAdminManager({
           New event
         </button>
 
+        <div className="mt-4">
+          <ListSearch
+            label="Search managed events"
+            onQueryChange={eventList.setQuery}
+            placeholder="Title, organizer, type, or status"
+            query={eventList.query}
+            total={eventList.total}
+          />
+        </div>
         <div className="mt-4 space-y-2">
-          {events.length ? (
-            events.map((event) => (
+          {eventList.items.length ? (
+            eventList.items.map((event) => (
               <button
                 className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                   selected?.eventId === event.eventId
@@ -314,10 +341,18 @@ export function EventAdminManager({
             ))
           ) : (
             <p className="py-4 text-sm text-slate-500">
-              No events have been created yet.
+              {events.length
+                ? "No events match your search."
+                : "No events have been created yet."}
             </p>
           )}
         </div>
+        <Pagination
+          label="Event management pages"
+          onPageChange={eventList.setPage}
+          page={eventList.page}
+          pageCount={eventList.pageCount}
+        />
       </aside>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -3,7 +3,10 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
 import { useAuth } from "@/features/auth/auth-context";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   listMemberAnnouncements,
   listPublicAnnouncements,
@@ -11,11 +14,22 @@ import {
 import { announcementExcerpt, formatAnnouncementDate } from "./format";
 import type { MemberAnnouncement } from "./types";
 
+function announcementSearchText(announcement: MemberAnnouncement) {
+  return [
+    announcement.title,
+    announcement.content,
+    announcement.category,
+    announcement.createdBy.firstName,
+    announcement.createdBy.lastName,
+  ].join(" ");
+}
+
 export function AnnouncementList() {
   const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<MemberAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const listing = useSearchPagination(items, announcementSearchText);
 
   useEffect(() => {
     if (authLoading) {
@@ -70,20 +84,30 @@ export function AnnouncementList() {
     );
   }
 
-  if (!items.length) {
-    return (
-      <div className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="font-medium text-slate-900">No announcements yet.</p>
-        <p className="mt-2 text-sm text-slate-600">
-          Published regional announcements will appear here.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="mt-8 space-y-5">
-      {items.map((announcement) => (
+      <ListSearch
+        label="Search announcements"
+        onQueryChange={listing.setQuery}
+        placeholder="Search by title, content, category, or author"
+        query={listing.query}
+        total={listing.total}
+      />
+      {!listing.total ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+          <p className="font-medium text-slate-900">
+            {items.length
+              ? "No announcements match your search."
+              : "No announcements yet."}
+          </p>
+          <p className="mt-2 text-sm text-slate-600">
+            {items.length
+              ? "Try another title, category, or author."
+              : "Published regional announcements will appear here."}
+          </p>
+        </div>
+      ) : null}
+      {listing.items.map((announcement) => (
         <Link
           className="block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-blue-300 hover:shadow"
           href={`/announcements/${announcement.announcementId}`}
@@ -136,6 +160,12 @@ export function AnnouncementList() {
           </div>
         </Link>
       ))}
+      <Pagination
+        label="Announcements pagination"
+        onPageChange={listing.setPage}
+        page={listing.page}
+        pageCount={listing.pageCount}
+      />
     </div>
   );
 }

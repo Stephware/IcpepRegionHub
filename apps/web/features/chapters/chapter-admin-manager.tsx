@@ -1,6 +1,9 @@
 "use client";
 
 import { Alert, LoadingState } from "@/components/ui/feedback";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   createChapter,
@@ -59,6 +62,16 @@ export function ChapterAdminManager() {
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const chapterList = useSearchPagination(chapters, (chapter) =>
+    [
+      chapter.chapterName,
+      chapter.schoolName,
+      chapter.acronym,
+      chapter.officialEmail,
+      chapter.address,
+      chapter.status,
+    ].join(" "),
+  );
 
   const loadChapters = useCallback(async () => {
     const items = await listAdminChapters();
@@ -286,9 +299,18 @@ export function ChapterAdminManager() {
           Add chapter
         </button>
 
+        <div className="mt-4">
+          <ListSearch
+            label="Search chapters"
+            onQueryChange={chapterList.setQuery}
+            placeholder="Chapter, school, email, or status"
+            query={chapterList.query}
+            total={chapterList.total}
+          />
+        </div>
         <div className="mt-4 space-y-2">
-          {chapters.length ? (
-            chapters.map((chapter) => (
+          {chapterList.items.length ? (
+            chapterList.items.map((chapter) => (
               <button
                 className={`w-full rounded-lg border px-3 py-3 text-left transition ${
                   selectedChapter?.chapterId === chapter.chapterId
@@ -318,10 +340,18 @@ export function ChapterAdminManager() {
             ))
           ) : (
             <p className="py-4 text-sm text-slate-500">
-              No chapters have been created yet.
+              {chapters.length
+                ? "No chapters match your search."
+                : "No chapters have been created yet."}
             </p>
           )}
         </div>
+        <Pagination
+          label="Chapter management pages"
+          onPageChange={chapterList.setPage}
+          page={chapterList.page}
+          pageCount={chapterList.pageCount}
+        />
       </aside>
 
       <div className="space-y-6">
