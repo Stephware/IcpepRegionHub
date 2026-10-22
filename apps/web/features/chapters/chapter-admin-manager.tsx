@@ -62,6 +62,10 @@ export function ChapterAdminManager() {
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const officerList = useSearchPagination(officers, (officer) =>
+    [officer.fullName, officer.position, officer.academicYear, officer.email, officer.isCurrent ? "Current" : "Former"].join(" "),
+    6,
+  );
   const chapterList = useSearchPagination(chapters, (chapter) =>
     [
       chapter.chapterName,
@@ -117,6 +121,7 @@ export function ChapterAdminManager() {
     setSelectedChapter(null);
     setChapterForm(emptyChapterForm);
     setOfficers([]);
+    officerList.setQuery("");
     setEditingOfficerId(null);
     setOfficerForm(emptyOfficerForm);
     setError("");
@@ -145,6 +150,7 @@ export function ChapterAdminManager() {
         facebookUrl: chapter.facebookUrl ?? "",
       });
       setOfficers(chapterOfficers);
+      officerList.setQuery("");
       setEditingOfficerId(null);
       setOfficerForm(emptyOfficerForm);
     } catch (requestError) {
@@ -463,9 +469,18 @@ export function ChapterAdminManager() {
               </p>
             </div>
 
-            {officers.length ? (
+            {officers.length > 6 || officerList.query ? (
+              <ListSearch
+                label="Search chapter officers"
+                placeholder="Name, position, academic year, or status"
+                query={officerList.query}
+                onQueryChange={officerList.setQuery}
+                total={officerList.total}
+              />
+            ) : null}
+            {officerList.total ? (
               <div className="mt-5 space-y-3">
-                {officers.map((officer) => (
+                {officerList.items.map((officer) => (
                   <div
                     className="flex flex-col justify-between gap-3 rounded-lg border border-slate-200 p-4 sm:flex-row sm:items-center"
                     key={officer.chapterOfficerId}
@@ -507,9 +522,11 @@ export function ChapterAdminManager() {
               </div>
             ) : (
               <p className="mt-5 rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-600">
-                No officer records have been added for this chapter.
+                {officers.length ? "No officer records match your search." : "No officer records have been added for this chapter."}
               </p>
             )}
+
+            <Pagination label="Chapter officer records" page={officerList.page} pageCount={officerList.pageCount} onPageChange={officerList.setPage} />
 
             <form
               className="mt-6 grid gap-5 border-t border-slate-200 pt-6 sm:grid-cols-2"

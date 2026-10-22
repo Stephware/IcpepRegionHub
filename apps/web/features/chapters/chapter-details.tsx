@@ -3,6 +3,9 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { Alert, LoadingState } from "@/components/ui/feedback";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import { OfficerPhoto } from "./officer-photo";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -17,6 +20,10 @@ export function ChapterDetails() {
   const [officers, setOfficers] = useState<ChapterOfficer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const officerList = useSearchPagination(officers, (officer) =>
+    [officer.fullName, officer.position, officer.academicYear, officer.email].join(" "),
+    8,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -142,9 +149,12 @@ export function ChapterDetails() {
         <h2 className="text-xl font-semibold text-slate-950">
           Current officers
         </h2>
-        {officers.length ? (
+        {officers.length > 8 || officerList.query ? (
+          <ListSearch label="Search current officers" placeholder="Officer name, position, or year" query={officerList.query} onQueryChange={officerList.setQuery} total={officerList.total} />
+        ) : null}
+        {officerList.total ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {officers.map((officer) => (
+            {officerList.items.map((officer) => (
               <article
                 className="rounded-xl border border-slate-200 bg-white p-5"
                 key={officer.chapterOfficerId}
@@ -175,9 +185,10 @@ export function ChapterDetails() {
           </div>
         ) : (
           <p className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">
-            Current officer information has not been added yet.
+            {officers.length ? "No officers match your search." : "Current officer information has not been added yet."}
           </p>
         )}
+        <Pagination label="Current officer pages" page={officerList.page} pageCount={officerList.pageCount} onPageChange={officerList.setPage} />
       </section>
     </main>
   );
