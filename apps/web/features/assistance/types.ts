@@ -76,3 +76,5 @@ export type RegionalAssistanceFilters = {
   priority?: AssistancePriority;
   chapterId?: string;
 };
+
+export type RegionalAssistanceSummary = { counts: { open: number; submitted: number; inProgress: number; resolved: number }; chapters: AssistanceChapter[] };

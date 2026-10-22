@@ -1,9 +1,20 @@
 import { apiFetch } from "@/lib/api/client";
+import type { PagedResponse } from "@/lib/paged-response";
+import type { AdminAccountFilter } from "./helpers";
 import type { FacultyDesignation, UserRole } from "@/features/auth/types";
 import type { AdminAccount } from "./types";
 
 export function listAdminAccounts() {
   return apiFetch<AdminAccount[]>("/admin/accounts");
+}
+
+export function listAdminAccountsPaged(options: { filter?: AdminAccountFilter; search?: string; page?: number; pageSize?: number }) {
+  const params = new URLSearchParams();
+  if (options.filter && options.filter !== "All") params.set("filter", options.filter);
+  if (options.search?.trim()) params.set("search", options.search.trim());
+  if (options.page) params.set("page", String(options.page));
+  if (options.pageSize) params.set("pageSize", String(options.pageSize));
+  return apiFetch<PagedResponse<AdminAccount>>(`/admin/accounts/paged?${params.toString()}`);
 }
 
 export function listPendingAdminAccounts() {

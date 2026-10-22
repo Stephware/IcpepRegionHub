@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChapterSelect } from "@/features/chapters/chapter-select";
 import {
   facultyDesignations,
@@ -14,17 +14,15 @@ import { Select } from "@/components/ui/form-controls";
 import { TableContainer } from "@/components/ui/table";
 import { ListSearch } from "@/components/ui/list-search";
 import { Pagination } from "@/components/ui/pagination";
-import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   approveAdminAccount,
   changeAdminAccountRole,
-  listAdminAccounts,
+  listAdminAccountsPaged,
   rejectAdminAccount,
   setAdminAccountActive,
 } from "./api";
 import {
   accountState,
-  filterAdminAccounts,
   type AdminAccountFilter,
 } from "./helpers";
 import type { AdminAccount } from "./types";
@@ -60,6 +58,10 @@ function stateVariant(state: string) {
 export function AccountAdminManager() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [filter, setFilter] = useState<AdminAccountFilter>("All");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -74,10 +76,14 @@ export function AccountAdminManager() {
   useEffect(() => {
     let cancelled = false;
 
-    listAdminAccounts()
-      .then((items) => {
+    listAdminAccountsPaged({ filter, search: query, page, pageSize: 10 })
+      .then((result) => {
         if (!cancelled) {
-          setAccounts(items);
+          setAccounts(result.items);
+          setTotal(result.total);
+          setPageCount(result.pageCount);
+          if (result.page !== page) setPage(result.page);
+          setError("");
         }
       })
       .catch((requestError) => {
@@ -98,32 +104,14 @@ export function AccountAdminManager() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const visibleAccounts = useMemo(
-    () => filterAdminAccounts(accounts, filter),
-    [accounts, filter],
-  );
-  const accountList = useSearchPagination(
-    visibleAccounts,
-    (account) =>
-      [
-        account.firstName,
-        account.lastName,
-        account.email,
-        account.role.replace(/([a-z])([A-Z])/g, "$1 $2"),
-        account.facultyDesignation,
-        account.chapter?.schoolName,
-        account.chapter?.chapterName,
-        account.chapter?.acronym,
-        account.chapter ? "" : "Regional",
-        accountState(account),
-      ].join(" "),
-    10,
-  );
+  }, [filter, query, page]);
 
   async function refresh() {
-    setAccounts(await listAdminAccounts());
+    const result = await listAdminAccountsPaged({ filter, search: query, page, pageSize: 10 });
+    setAccounts(result.items);
+    setTotal(result.total);
+    setPageCount(result.pageCount);
+    setPage(result.page);
   }
 
   async function runAction(
@@ -170,7 +158,7 @@ export function AccountAdminManager() {
             key={item}
             onClick={() => {
               setFilter(item);
-              accountList.setPage(1);
+              setPage(1);
             }}
             size="sm"
             variant={filter === item ? "primary" : "secondary"}
@@ -191,13 +179,13 @@ export function AccountAdminManager() {
 
       <ListSearch
         label="Search accounts"
-        onQueryChange={accountList.setQuery}
+        onQueryChange={(value) => { setQuery(value); setPage(1); }}
         placeholder="Name, email, institution, or role"
-        query={accountList.query}
-        total={accountList.total}
+        query={query}
+        total={total}
       />
 
-      {accountList.items.length ? (
+      {accounts.length ? (
         <TableContainer>
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -210,7 +198,7 @@ export function AccountAdminManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {accountList.items.map((account) => {
+              {accounts.map((account) => {
                 const state = accountState(account);
                 const busy = actionId === account.userId;
 
@@ -417,9 +405,9 @@ export function AccountAdminManager() {
       )}
       <Pagination
         label="Account pages"
-        onPageChange={accountList.setPage}
-        page={accountList.page}
-        pageCount={accountList.pageCount}
+        onPageChange={setPage}
+        page={page}
+        pageCount={pageCount}
       />
     </div>
   );
