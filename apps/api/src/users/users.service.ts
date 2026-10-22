@@ -7,6 +7,8 @@ import {
 import type { Prisma } from "../generated/prisma/client.js";
 import { UserRole } from "../common/constants/roles.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { pageMetadata } from "../common/dto/page-query.dto.js";
+import type { ListAccountsQueryDto } from "./dto/list-accounts-query.dto.js";
 
 type CreateRegistrantInput = {
   role: UserRole.ChapterOfficer | UserRole.FacultyRepresentative;
@@ -128,6 +130,44 @@ export class UsersService {
     });
 
     return users.map((user) => this.toPublicUser(user));
+  }
+
+  async listUsersPaged(query: ListAccountsQueryDto) {
+    const pageSize = query.pageSize ?? 10;
+    const tokens = (query.search ?? "").trim().split(/\s+/).filter(Boolean);
+    const where: Prisma.UserWhereInput = {
+      ...(query.filter === "Pending" ? { isApproved: false, isActive: true } :
+        query.filter === "Active" ? { isApproved: true, isActive: true } :
+        query.filter === "Inactive" ? { isApproved: true, isActive: false } :
+        query.filter === "Rejected" ? { isApproved: false, isActive: false } : {}),
+      ...(tokens.length ? {
+        AND: tokens.map((term) => ({
+          OR: [
+            { firstName: { contains: term, mode: "insensitive" as const } },
+            { lastName: { contains: term, mode: "insensitive" as const } },
+            { email: { contains: term, mode: "insensitive" as const } },
+            { role: { contains: term, mode: "insensitive" as const } },
+            { facultyDesignation: { contains: term, mode: "insensitive" as const } },
+            { chapter: { is: { OR: [
+              { schoolName: { contains: term, mode: "insensitive" as const } },
+              { chapterName: { contains: term, mode: "insensitive" as const } },
+              { acronym: { contains: term, mode: "insensitive" as const } },
+            ] } } },
+            ...( "regional".includes(term.toLowerCase()) ? [{ chapterId: null }] : []),
+          ],
+        })),
+      } : {}),
+    };
+    const total = await this.prisma.user.count({ where });
+    const meta = pageMetadata(total, query.page, pageSize);
+    const items = await this.prisma.user.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }, { userId: "desc" }],
+      skip: meta.skip,
+      take: pageSize,
+      select: publicUserSelect,
+    });
+    return { items: items.map((user) => this.toPublicUser(user)), total, page: meta.page, pageCount: meta.pageCount, pageSize };
   }
 
   async listPendingUsers() {

@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   UseGuards,
 } from "@nestjs/common";
 import { Roles } from "../common/decorators/roles.decorator.js";
@@ -14,6 +15,7 @@ import { UserRole } from "../common/constants/roles.js";
 import { UpdateUserActiveDto } from "../users/dto/update-user-active.dto.js";
 import { UpdateUserRoleDto } from "../users/dto/update-user-role.dto.js";
 import { UsersService } from "../users/users.service.js";
+import { ListAccountsQueryDto } from "../users/dto/list-accounts-query.dto.js";
 
 @Controller("admin/accounts")
 @UseGuards(AuthGuard, RolesGuard)
@@ -24,6 +26,11 @@ export class AccountAdminController {
   @Get()
   listUsers() {
     return this.usersService.listUsers();
+  }
+
+  @Get("paged")
+  listPaged(@Query() query: ListAccountsQueryDto) {
+    return this.usersService.listUsersPaged(query);
   }
 
   @Get("pending")

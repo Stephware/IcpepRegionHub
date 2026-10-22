@@ -7,6 +7,9 @@ import {
 import { randomBytes } from "node:crypto";
 import { UserRole } from "../common/constants/roles.js";
 import { PrismaService } from "../prisma/prisma.service.js";
+import type { Prisma } from "../generated/prisma/client.js";
+import { pageMetadata } from "../common/dto/page-query.dto.js";
+import type { PagedRegionalRequestsQueryDto } from "./dto/paged-regional-requests-query.dto.js";
 import { AssignAssistanceRequestDto } from "./dto/assign-assistance-request.dto.js";
 import { CreateAssistanceRequestDto } from "./dto/create-assistance-request.dto.js";
 import { CreateAssistanceUpdateDto } from "./dto/create-assistance-update.dto.js";
@@ -207,6 +210,76 @@ export class AssistanceRequestsService {
     });
 
     return requests.map((request) => this.toRequestSummary(request));
+  }
+
+  async listRegionalRequestsPaged(query: PagedRegionalRequestsQueryDto) {
+    const chapterId = query.chapterId
+      ? this.parsePositiveId(query.chapterId, "Chapter")
+      : undefined;
+    const tokens = (query.search ?? "").trim().split(/\s+/).filter(Boolean);
+    const where: Prisma.AssistanceRequestWhereInput = {
+      status: query.status,
+      priority: query.priority,
+      chapterId,
+      ...(tokens.length ? { AND: tokens.map((term) => ({
+        OR: [
+          { ticketCode: { contains: term, mode: "insensitive" as const } },
+          { subject: { contains: term, mode: "insensitive" as const } },
+          { category: { contains: term, mode: "insensitive" as const } },
+          { status: { contains: term, mode: "insensitive" as const } },
+          { priority: { contains: term, mode: "insensitive" as const } },
+          { chapter: { is: { OR: [
+            { schoolName: { contains: term, mode: "insensitive" as const } },
+            { chapterName: { contains: term, mode: "insensitive" as const } },
+            { acronym: { contains: term, mode: "insensitive" as const } },
+          ] } } },
+          { submittedBy: { is: { OR: [
+            { firstName: { contains: term, mode: "insensitive" as const } },
+            { lastName: { contains: term, mode: "insensitive" as const } },
+          ] } } },
+          { assignedTo: { is: { OR: [
+            { firstName: { contains: term, mode: "insensitive" as const } },
+            { lastName: { contains: term, mode: "insensitive" as const } },
+          ] } } },
+        ],
+      })) } : {}),
+    };
+    const total = await this.prisma.assistanceRequest.count({ where });
+    const meta = pageMetadata(total, query.page, query.pageSize ?? 6);
+    const items = await this.prisma.assistanceRequest.findMany({
+      where,
+      include: requestInclude,
+      orderBy: [{ priority: "desc" }, { submittedAt: "desc" }, { assistanceRequestId: "desc" }],
+      skip: meta.skip,
+      take: meta.pageSize,
+    });
+    return { items: items.map((request) => this.toRequestSummary(request)), total, page: meta.page, pageCount: meta.pageCount, pageSize: meta.pageSize };
+  }
+
+  async getRegionalRequestSummary() {
+    const [groups, chapters] = await Promise.all([
+      this.prisma.assistanceRequest.groupBy({ by: ["status"], _count: { _all: true } }),
+      this.prisma.chapter.findMany({
+        where: { assistanceRequests: { some: {} } },
+        select: { chapterId: true, schoolName: true, chapterName: true, acronym: true },
+        orderBy: { schoolName: "asc" },
+      }),
+    ]);
+    const count = (status: string) => groups.find((g) => g.status === status)?._count._all ?? 0;
+    return {
+      counts: {
+        open: count("Submitted") + count("Under Review") + count("In Progress"),
+        submitted: count("Submitted"),
+        inProgress: count("Under Review") + count("In Progress"),
+        resolved: count("Resolved") + count("Closed"),
+      },
+      chapters: chapters.map((c) => ({
+        chapterId: c.chapterId.toString(),
+        schoolName: c.schoolName,
+        chapterName: c.chapterName,
+        acronym: c.acronym,
+      })),
+    };
   }
 
   async getRegionalRequest(assistanceRequestId: bigint) {
