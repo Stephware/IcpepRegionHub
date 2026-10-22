@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ListSearch } from "@/components/ui/list-search";
+import { Pagination } from "@/components/ui/pagination";
+import { useSearchPagination } from "@/lib/use-search-pagination";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -26,6 +29,10 @@ export function CollaborationResponseManager() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const responseList = useSearchPagination(responses, (response) =>
+    [response.chapter.schoolName, response.chapter.chapterName, response.user.firstName, response.user.lastName, response.user.email, response.status, response.message].join(" "),
+    6,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -155,9 +162,12 @@ export function CollaborationResponseManager() {
         </p>
       ) : null}
 
-      {responses.length ? (
+      {responses.length > 6 || responseList.query ? (
+        <ListSearch label="Search collaboration responses" placeholder="Chapter, person, status, or message" query={responseList.query} onQueryChange={responseList.setQuery} total={responseList.total} />
+      ) : null}
+      {responseList.total ? (
         <div className="mt-8 space-y-4">
-          {responses.map((response) => (
+          {responseList.items.map((response) => (
             <article
               className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
               key={response.collaborationResponseId}
@@ -229,13 +239,14 @@ export function CollaborationResponseManager() {
       ) : (
         <div className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
           <p className="font-medium text-slate-900">
-            No chapter responses yet.
+            {responses.length ? "No responses match your search." : "No chapter responses yet."}
           </p>
           <p className="mt-2 text-sm text-slate-600">
             Interested chapters will appear here after they respond.
           </p>
         </div>
       )}
+      <Pagination label="Collaboration response pages" page={responseList.page} pageCount={responseList.pageCount} onPageChange={responseList.setPage} />
     </main>
   );
 }

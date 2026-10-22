@@ -1,15 +1,15 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { ListSearch } from "@/components/ui/list-search";
 import { Pagination } from "@/components/ui/pagination";
-import { useSearchPagination } from "@/lib/use-search-pagination";
 import {
   addRegionalAssistanceUpdate,
   assignRegionalAssistanceRequest,
   getRegionalAssistanceRequest,
   listRegionalAssignees,
-  listRegionalAssistanceRequests,
+  listRegionalAssistanceRequestsPaged,
+  getRegionalAssistanceSummary,
   updateRegionalAssistancePriority,
   updateRegionalAssistanceStatus,
 } from "./api";
@@ -21,13 +21,11 @@ import {
 import {
   assistancePriorities,
 } from "./constants";
-import {
-  countAssistanceStatuses,
-  nextAssistanceStatuses,
-} from "./workflow";
+import { nextAssistanceStatuses } from "./workflow";
 import type {
   AssistancePriority,
   AssistanceRequestSummary,
+  RegionalAssistanceSummary,
   AssistanceStatus,
   RegionalAssignee,
   RegionalAssistanceFilters,
@@ -43,8 +41,15 @@ const statuses: AssistanceStatus[] = [
 ];
 
 export function RegionalAssistanceManager() {
-  const [allRequests, setAllRequests] = useState<AssistanceRequestSummary[]>([]);
   const [requests, setRequests] = useState<AssistanceRequestSummary[]>([]);
+  const [summary, setSummary] = useState<RegionalAssistanceSummary>({
+    counts: { open: 0, submitted: 0, inProgress: 0, resolved: 0 }, chapters: [],
+  });
+  const [appliedFilters, setAppliedFilters] = useState<RegionalAssistanceFilters>({});
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(0);
   const [assignees, setAssignees] = useState<RegionalAssignee[]>([]);
   const [selected, setSelected] =
     useState<RegionalAssistanceRequestDetails | null>(null);
@@ -57,35 +62,17 @@ export function RegionalAssistanceManager() {
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const requestList = useSearchPagination(
-    requests,
-    (request) => [
-      request.ticketCode,
-      request.subject,
-      request.category,
-      request.status,
-      request.priority,
-      request.chapter.chapterName,
-      request.chapter.schoolName,
-      request.chapter.acronym,
-      request.submittedBy.firstName,
-      request.submittedBy.lastName,
-      request.assignedTo?.firstName,
-      request.assignedTo?.lastName,
-    ].join(" "),
-  );
 
   useEffect(() => {
     let cancelled = false;
 
     Promise.all([
-      listRegionalAssistanceRequests(),
+      getRegionalAssistanceSummary(),
       listRegionalAssignees(),
     ])
-      .then(([requestItems, userItems]) => {
+      .then(([summaryResult, userItems]) => {
         if (!cancelled) {
-          setAllRequests(requestItems);
-          setRequests(requestItems);
+          setSummary(summaryResult);
           setAssignees(userItems);
         }
       })
@@ -109,22 +96,25 @@ export function RegionalAssistanceManager() {
     };
   }, []);
 
-  const chapterOptions = useMemo(() => {
-    const unique = new Map<string, AssistanceRequestSummary["chapter"]>();
+  const chapterOptions = summary.chapters;
+  const counts = summary.counts;
 
-    for (const request of allRequests) {
-      unique.set(request.chapter.chapterId, request.chapter);
-    }
-
-    return [...unique.values()].sort((left, right) =>
-      left.schoolName.localeCompare(right.schoolName),
-    );
-  }, [allRequests]);
-
-  const counts = useMemo(
-    () => countAssistanceStatuses(allRequests.map((request) => request.status)),
-    [allRequests],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    listRegionalAssistanceRequestsPaged({ ...appliedFilters, search: query, page, pageSize: 6 })
+      .then((result) => {
+        if (cancelled) return;
+        setRequests(result.items);
+        setTotal(result.total);
+        setPageCount(result.pageCount);
+        if (result.page !== page) setPage(result.page);
+        setError("");
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError instanceof Error ? requestError.message : "Unable to load requests.");
+      });
+    return () => { cancelled = true; };
+  }, [appliedFilters, query, page]);
 
   async function openRequest(requestId: string) {
     setDetailsLoading(true);
@@ -145,13 +135,15 @@ export function RegionalAssistanceManager() {
   }
 
   async function refreshData(requestId?: string) {
-    const [allItems, filteredItems] = await Promise.all([
-      listRegionalAssistanceRequests(),
-      listRegionalAssistanceRequests(filters),
+    const [summaryResult, result] = await Promise.all([
+      getRegionalAssistanceSummary(),
+      listRegionalAssistanceRequestsPaged({ ...appliedFilters, search: query, page, pageSize: 6 }),
     ]);
-
-    setAllRequests(allItems);
-    setRequests(filteredItems);
+    setSummary(summaryResult);
+    setRequests(result.items);
+    setTotal(result.total);
+    setPageCount(result.pageCount);
+    setPage(result.page);
 
     if (requestId) {
       setSelected(await getRegionalAssistanceRequest(requestId));
@@ -163,31 +155,21 @@ export function RegionalAssistanceManager() {
     setNotice("");
   }
 
-  async function applyFilters(event: FormEvent<HTMLFormElement>) {
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setNotice("");
-
-    try {
-      setRequests(await listRegionalAssistanceRequests(filters));
-      requestList.setPage(1);
-    } catch (requestError) {
-      showError(requestError, "Unable to filter requests.");
-    }
+    setAppliedFilters({ ...filters });
+    setPage(1);
   }
 
-  async function clearFilters() {
-    const cleared: RegionalAssistanceFilters = {};
-    setFilters(cleared);
-    requestList.setQuery("");
+  function clearFilters() {
+    setFilters({});
+    setAppliedFilters({});
+    setQuery("");
+    setPage(1);
     setError("");
     setNotice("");
-
-    try {
-      setRequests(await listRegionalAssistanceRequests(cleared));
-    } catch (requestError) {
-      showError(requestError, "Unable to load requests.");
-    }
   }
 
   async function assignTo(userId: string) {
@@ -409,20 +391,20 @@ export function RegionalAssistanceManager() {
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-slate-950">Requests</h2>
             <span className="text-xs text-slate-500">
-              {requestList.items.length} of {requestList.total} shown
+              {requests.length} of {total} shown
             </span>
           </div>
           <ListSearch
             label="Search regional requests"
-            onQueryChange={requestList.setQuery}
+            onQueryChange={(value) => { setQuery(value); setPage(1); }}
             placeholder="Search tickets, chapters, or people"
-            query={requestList.query}
-            total={requestList.total}
+            query={query}
+            total={total}
           />
 
           <div className="mt-4 max-h-[52rem] space-y-3 overflow-y-auto pr-1">
-            {requestList.total ? (
-              requestList.items.map((request) => (
+            {total ? (
+              requests.map((request) => (
                 <button
                   className={`w-full rounded-lg border p-4 text-left transition ${
                     selected?.assistanceRequestId ===
@@ -474,9 +456,9 @@ export function RegionalAssistanceManager() {
           </div>
           <Pagination
             label="Regional requests pagination"
-            onPageChange={requestList.setPage}
-            page={requestList.page}
-            pageCount={requestList.pageCount}
+            onPageChange={setPage}
+            page={page}
+            pageCount={pageCount}
           />
         </aside>
 

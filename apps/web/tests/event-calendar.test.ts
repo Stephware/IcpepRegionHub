@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarMonth } from "../features/events/calendar";
+import { buildCalendarMonth, visibleCalendarEvents } from "../features/events/calendar";
 import {
   eventOrganizerLabel,
   isRegistrationOpen,
@@ -31,6 +31,13 @@ const event: EventItem = {
 };
 
 describe("event calendar helpers", () => {
+  it("reveals all events on a busy calendar date", () => {
+    const events = [1, 2, 3, 4, 5];
+    expect(visibleCalendarEvents(events, false)).toEqual([1, 2, 3]);
+    expect(visibleCalendarEvents(events, true)).toEqual(events);
+    expect(visibleCalendarEvents([1, 2], false)).toEqual([1, 2]);
+  });
+
   it("places an event on the matching calendar date", () => {
     const days = buildCalendarMonth(new Date(2026, 9, 1), [event]);
     const eventDay = days.find(

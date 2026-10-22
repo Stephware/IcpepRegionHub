@@ -19,6 +19,7 @@ import { AssistanceRequestsService } from "./assistance-requests.service.js";
 import { AssignAssistanceRequestDto } from "./dto/assign-assistance-request.dto.js";
 import { CreateAssistanceUpdateDto } from "./dto/create-assistance-update.dto.js";
 import { ListAssistanceRequestsQueryDto } from "./dto/list-assistance-requests-query.dto.js";
+import { PagedRegionalRequestsQueryDto } from "./dto/paged-regional-requests-query.dto.js";
 import { UpdateAssistancePriorityDto } from "./dto/update-assistance-priority.dto.js";
 import { UpdateAssistanceStatusDto } from "./dto/update-assistance-status.dto.js";
 
@@ -33,6 +34,16 @@ export class RegionalAssistanceRequestsController {
   @Get()
   listRequests(@Query() query: ListAssistanceRequestsQueryDto) {
     return this.assistanceRequestsService.listRegionalRequests(query);
+  }
+
+  @Get("paged")
+  listPagedRequests(@Query() query: PagedRegionalRequestsQueryDto) {
+    return this.assistanceRequestsService.listRegionalRequestsPaged(query);
+  }
+
+  @Get("summary")
+  getSummary() {
+    return this.assistanceRequestsService.getRegionalRequestSummary();
   }
 
   @Get("assignees")

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api/client";
+import type { PagedResponse } from "@/lib/paged-response";
 import type {
   AssistancePriority,
   AssistanceRequestDetails,
@@ -7,6 +8,7 @@ import type {
   AssistanceStatus,
   RegionalAssignee,
   RegionalAssistanceFilters,
+  RegionalAssistanceSummary,
   RegionalAssistanceRequestDetails,
   RegionalAssistanceUpdate,
 } from "./types";
@@ -53,6 +55,22 @@ export function listRegionalAssistanceRequests(
   return apiFetch<AssistanceRequestSummary[]>(
     `/regional/assistance-requests${suffix}`,
   );
+}
+
+export function listRegionalAssistanceRequestsPaged(
+  filters: RegionalAssistanceFilters & { search?: string; page?: number; pageSize?: number } = {},
+) {
+  const query = new URLSearchParams();
+  if (filters.status) query.set("status", filters.status);
+  if (filters.priority) query.set("priority", filters.priority);
+  if (filters.chapterId) query.set("chapterId", filters.chapterId);
+  if (filters.search?.trim()) query.set("search", filters.search.trim());
+  if (filters.page) query.set("page", String(filters.page));
+  if (filters.pageSize) query.set("pageSize", String(filters.pageSize));
+  return apiFetch<PagedResponse<AssistanceRequestSummary>>(`/regional/assistance-requests/paged?${query.toString()}`);
+}
+export function getRegionalAssistanceSummary() {
+  return apiFetch<RegionalAssistanceSummary>("/regional/assistance-requests/summary");
 }
 
 export function getRegionalAssistanceRequest(requestId: string) {

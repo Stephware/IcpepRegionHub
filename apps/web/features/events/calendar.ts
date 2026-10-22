@@ -39,3 +39,8 @@ export function buildCalendarMonth(
     };
   });
 }
+
+/** Reveal all events for a busy day instead of hiding them behind an inert label. */
+export function visibleCalendarEvents<T>(events: T[], expanded: boolean, previewSize = 3): T[] {
+  return expanded ? events : events.slice(0, previewSize);
+}
