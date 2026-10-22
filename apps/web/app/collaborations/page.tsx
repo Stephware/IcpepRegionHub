@@ -1,13 +1,23 @@
+"use client";
+
 import { LandingHero } from "@/components/landing/landing-hero";
+import { useAuth } from "@/features/auth/auth-context";
 import { ProtectedRoute } from "@/features/auth/protected-route";
 import { CollaborationBoard } from "@/features/collaborations/collaboration-board";
 
 export default function CollaborationsPage() {
+  const { user } = useAuth();
+
   return (
     <ProtectedRoute>
       <main>
         <LandingHero
           compact
+          actions={
+            user?.role === "ChapterOfficer"
+              ? [{ href: "/collaborations/new", label: "Create collaboration" }]
+              : []
+          }
           description="Find partner chapters, share resources, and coordinate joint initiatives with fellow ICpEP.se organizations across Region 3."
           eyebrow="Work Across Chapters"
           title="Collaboration Board"

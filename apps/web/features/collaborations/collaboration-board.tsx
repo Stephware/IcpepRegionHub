@@ -54,7 +54,11 @@ function toIsoOrNull(value: string | null | undefined) {
   return value ? new Date(value).toISOString() : null;
 }
 
-export function CollaborationBoard() {
+export function CollaborationBoard({
+  createOnly = false,
+}: {
+  createOnly?: boolean;
+}) {
   const { user } = useAuth();
   const canManage = user?.role === "ChapterOfficer";
   const [openPosts, setOpenPosts] = useState<CollaborationPost[]>([]);
@@ -72,8 +76,12 @@ export function CollaborationBoard() {
     let cancelled = false;
 
     Promise.all([
-      listOpenCollaborationPosts(),
-      canManage ? listMyCollaborationPosts() : Promise.resolve([]),
+      createOnly
+        ? Promise.resolve<CollaborationPost[]>([])
+        : listOpenCollaborationPosts(),
+      canManage && !createOnly
+        ? listMyCollaborationPosts()
+        : Promise.resolve([]),
     ])
       .then(([openItems, ownItems]) => {
         if (!cancelled) {
@@ -104,7 +112,7 @@ export function CollaborationBoard() {
     return () => {
       cancelled = true;
     };
-  }, [canManage]);
+  }, [canManage, createOnly]);
 
   const visiblePosts = useMemo(
     () =>
@@ -156,8 +164,12 @@ export function CollaborationBoard() {
 
   async function refreshPosts() {
     const [openItems, ownItems] = await Promise.all([
-      listOpenCollaborationPosts(),
-      canManage ? listMyCollaborationPosts() : Promise.resolve([]),
+      createOnly
+        ? Promise.resolve<CollaborationPost[]>([])
+        : listOpenCollaborationPosts(),
+      canManage && !createOnly
+        ? listMyCollaborationPosts()
+        : Promise.resolve([]),
     ]);
 
     setOpenPosts(openItems);
@@ -278,7 +290,7 @@ export function CollaborationBoard() {
         </p>
       ) : null}
 
-      <section>
+      <section hidden={createOnly}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-slate-950">
@@ -363,8 +375,14 @@ export function CollaborationBoard() {
       </section>
 
       {canManage ? (
-        <section className="grid gap-8 xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
-          <div>
+        <section
+          className={
+            createOnly
+              ? undefined
+              : "grid gap-8 xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)]"
+          }
+        >
+          <div hidden={createOnly}>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">

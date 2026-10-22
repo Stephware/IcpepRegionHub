@@ -1,18 +1,17 @@
+"use client";
+
 import { LandingHero } from "@/components/landing/landing-hero";
+import { useAuth } from "@/features/auth/auth-context";
 import { EventDirectory } from "@/features/events/event-directory";
 
 export default function EventsPage() {
+  const { user } = useAuth();
+
   return (
     <main>
       <LandingHero
         compact
-        actions={[
-          {
-            href: "/events",
-            label: "Browse Events",
-            icon: "calendar",
-          },
-        ]}
+        actions={user ? [{ href: "/events/new", label: "Create event" }] : []}
         description="Discover assemblies, seminars, competitions, chapter activities, and other opportunities happening across ICpEP.se Region 3."
         eyebrow="Region 3 Calendar"
         title="Regional Events"

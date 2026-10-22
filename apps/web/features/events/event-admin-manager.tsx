@@ -53,8 +53,10 @@ function toIsoOrNull(value: string | null | undefined) {
 
 export function EventAdminManager({
   contributor = false,
+  createOnly = false,
 }: {
   contributor?: boolean;
+  createOnly?: boolean;
 }) {
   const { user } = useAuth();
   const isAdmin = user?.role === "RegionalAdmin";
@@ -75,16 +77,17 @@ export function EventAdminManager({
   const [notice, setNotice] = useState("");
 
   const loadEvents = useCallback(async () => {
+    if (createOnly) return [];
     const items = await listAdminEvents(base);
     setEvents(items);
     return items;
-  }, [base]);
+  }, [base, createOnly]);
 
   useEffect(() => {
     let cancelled = false;
 
     Promise.all([
-      listAdminEvents(base),
+      createOnly ? Promise.resolve([]) : listAdminEvents(base),
       isAdmin ? listPublicChapters() : Promise.resolve([]),
     ])
       .then(([eventItems, chapterItems]) => {
@@ -111,7 +114,7 @@ export function EventAdminManager({
     return () => {
       cancelled = true;
     };
-  }, [base, isAdmin]);
+  }, [base, isAdmin, createOnly]);
 
   function updateField<K extends keyof EventInput>(
     field: K,
@@ -246,8 +249,17 @@ export function EventAdminManager({
   }
 
   return (
-    <div className="mt-8 grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-      <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div
+      className={
+        createOnly
+          ? "mt-8"
+          : "mt-8 grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]"
+      }
+    >
+      <aside
+        hidden={createOnly}
+        className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+      >
         <button
           className="w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-medium text-white"
           onClick={startCreate}
