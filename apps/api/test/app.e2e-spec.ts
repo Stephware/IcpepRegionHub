@@ -213,7 +213,7 @@ describe("workflow authorization and visibility", () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
-    assistanceRequest: { findMany: jest.fn(), findFirst: jest.fn() },
+    assistanceRequest: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn(), groupBy: jest.fn() },
     collaborationPost: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -221,7 +221,7 @@ describe("workflow authorization and visibility", () => {
       update: jest.fn(),
     },
     collaborationResponse: { findFirst: jest.fn() },
-    chapter: { findUnique: jest.fn() },
+    chapter: { findUnique: jest.fn(), findMany: jest.fn() },
     user: {
       findUnique: jest.fn(),
       update: jest.fn(),
@@ -436,6 +436,61 @@ describe("workflow authorization and visibility", () => {
       chapterId: user.chapterId?.toString() ?? null,
     })}`;
   }
+
+  it("paginates accounts on the server and validates search inputs", async () => {
+    prisma.user.count.mockResolvedValue(12);
+    prisma.user.findMany.mockResolvedValue([]);
+    await request(app.getHttpServer())
+      .get("/api/admin/accounts/paged?filter=Pending&search=Juan&page=2&pageSize=3")
+      .set("Authorization", authorization(40))
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({ items: [], total: 12, page: 2, pageCount: 4, pageSize: 3 });
+      });
+    expect(prisma.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      skip: 3, take: 3, where: expect.objectContaining({ isApproved: false, isActive: true }),
+    }));
+    await request(app.getHttpServer())
+      .get("/api/admin/accounts/paged?page=0")
+      .set("Authorization", authorization(40))
+      .expect(400);
+    await request(app.getHttpServer())
+      .get("/api/admin/accounts/paged")
+      .set("Authorization", authorization(10))
+      .expect(403);
+  });
+
+  it("paginates regional requests and serves counts without downloading all tickets", async () => {
+    prisma.assistanceRequest.count.mockResolvedValue(12);
+    prisma.assistanceRequest.findMany.mockResolvedValue([]);
+    await request(app.getHttpServer())
+      .get("/api/regional/assistance-requests/paged?status=Submitted&search=AUF&page=2&pageSize=6")
+      .set("Authorization", authorization(30))
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({ items: [], total: 12, page: 2, pageCount: 2, pageSize: 6 });
+      });
+    expect(prisma.assistanceRequest.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      skip: 6, take: 6, where: expect.objectContaining({ status: "Submitted" }),
+    }));
+    prisma.assistanceRequest.groupBy.mockResolvedValue([{ status: "Submitted", _count: { _all: 3 } }]);
+    prisma.chapter.findMany.mockResolvedValue([]);
+    await request(app.getHttpServer())
+      .get("/api/regional/assistance-requests/summary")
+      .set("Authorization", authorization(30))
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.counts).toEqual({ open: 3, submitted: 3, inProgress: 0, resolved: 0 });
+      });
+    await request(app.getHttpServer())
+      .get("/api/regional/assistance-requests/paged?pageSize=200")
+      .set("Authorization", authorization(30))
+      .expect(400);
+    await request(app.getHttpServer())
+      .get("/api/regional/assistance-requests/paged")
+      .set("Authorization", authorization(50))
+      .expect(403);
+  });
 
   it.each([
     ["/admin/announcements", 401, 403, 403, 403, 200],
